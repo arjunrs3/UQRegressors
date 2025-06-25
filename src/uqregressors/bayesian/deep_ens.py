@@ -10,6 +10,11 @@ from torch.utils.data import TensorDataset, DataLoader
 from pathlib import Path
 import json
 import pickle
+from sklearn.preprocessing import StandardScaler
+import torch.multiprocessing as mp 
+import torch.nn.functional as F
+
+mp.set_start_method('spawn', force=True)
 
 class MLP(nn.Module): 
     def __init__(self, input_dim, hidden_sizes, activation):
@@ -20,12 +25,17 @@ class MLP(nn.Module):
             layers.append(activation())
             input_dim = h
         output_layer = nn.Linear(hidden_sizes[-1], 2)
-        output_layer.bias.data[1] = 0.0
         layers.append(output_layer)
         self.model = nn.Sequential(*layers)
 
     def forward(self, x):
-        return self.model(x)
+        outputs = self.model(x)
+        means = outputs[:, 0]
+        unscaled_variances = outputs[:, 1]
+        scaled_variance = F.softplus(unscaled_variances) + 1e-6
+        scaled_outputs = torch.cat((means.unsqueeze(dim=1), scaled_variance.unsqueeze(dim=1)), dim=1)
+
+        return scaled_outputs
     
 class DeepEnsembleRegressor(BaseEstimator, RegressorMixin): 
     def __init__(
@@ -48,6 +58,10 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         wandb_run_name=None,
         n_jobs=1,
         random_seed=None,
+        scale_data=True, 
+        input_scaler=None,
+        scale_output_data=True,
+        output_scaler=None
     ):
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
@@ -72,15 +86,31 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         self.models = []
         self.input_dim = None
 
+        self.scale_data = scale_data
+        self.scale_output_data = scale_output_data
+
+        if scale_data: 
+            self.input_scaler = input_scaler or StandardScaler()
+        if scale_output_data:
+            self.output_scaler = output_scaler or StandardScaler()
+
     def nll_loss(self, preds, y): 
         means = preds[:, 0]
-        log_variances = preds[:, 1]
-        precision = torch.exp(-log_variances)
+        variances = preds[:, 1]
+        precision = 1 / variances
         squared_error = (y.view(-1) - means) ** 2
-        nll = 0.5 * (log_variances + precision * squared_error)
+        nll = 0.5 * (torch.log(variances) + precision * squared_error)
         return nll.mean()
 
     def _train_single_model(self, X_tensor, y_tensor, input_dim, idx): 
+        X_tensor = X_tensor.to(self.device)
+        gpu = X_tensor.device
+        if gpu.type == "cuda" and gpu.index is not None:
+            models_on_this_gpu = max(1, self.n_estimators // torch.cuda.device_count())
+            memory_fraction = 0.9 / models_on_this_gpu
+            torch.cuda.set_per_process_memory_fraction(memory_fraction, device=gpu.index)
+        y_tensor = y_tensor.to(self.device)
+
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed + idx)
             np.random.seed(self.random_seed + idx)
@@ -115,7 +145,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
                 loss = self.loss_fn(preds, yb)
                 loss.backward() 
                 optimizer.step() 
-                epoch_loss += loss 
+                epoch_loss += loss.item()
             
             if epoch % (self.epochs / 20) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
@@ -127,8 +157,14 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         return model 
     
     def fit(self, X, y): 
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1).to(self.device)
+
+        if self.scale_data: 
+            X = self.input_scaler.fit_transform(X)
+        if self.scale_output_data:
+            y = self.output_scaler.fit_transform(y.reshape(-1, 1))
+
+        X_tensor = torch.tensor(X, dtype=torch.float32)
+        y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1)
 
         input_dim = X.shape[1]
         self.input_dim = input_dim
@@ -140,6 +176,8 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         return self
     
     def predict(self, X): 
+        if self.scale_data: 
+            X = self.input_scaler.transform(X)
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
         preds = [] 
 
@@ -152,14 +190,20 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         preds = np.array(preds)
 
         means = preds[:, :, 0]
-        variances = np.exp(preds[:, :, 1]) 
+        variances = preds[:, :, 1]
 
         mean = means.mean(axis=0)
         variance = np.mean(variances + means ** 2, axis=0) - mean ** 2
 
         std_mult = st.norm.ppf(1 - self.alpha / 2)
+
         lower = mean - variance ** 0.5 * std_mult 
         upper = mean + variance ** 0.5 * std_mult 
+
+        if self.scale_output_data: 
+            mean = self.output_scaler.inverse_transform(mean.reshape(-1, 1)).squeeze()
+            lower = self.output_scaler.inverse_transform(lower.reshape(-1, 1)).squeeze()
+            upper = self.output_scaler.inverse_transform(upper.reshape(-1, 1)).squeeze() 
 
         return mean, lower, upper
 

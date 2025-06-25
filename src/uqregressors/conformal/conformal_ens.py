@@ -5,6 +5,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.base import BaseEstimator, RegressorMixin 
 from uqregressors.utils.activations import get_activation 
 from uqregressors.utils.logging import Logger 
+from sklearn.preprocessing import StandardScaler
 from joblib import Parallel, delayed
 from pathlib import Path
 import json 
@@ -24,12 +25,14 @@ def train_test_split(X, cal_size, seed=None):
     return train_idx, cal_idx
 
 class MLP(nn.Module): 
-    def __init__(self, input_dim, hidden_sizes, activation): 
+    def __init__(self, input_dim, hidden_sizes, dropout, activation): 
         super().__init__()
         layers = []
         for h in hidden_sizes: 
             layers.append(nn.Linear(input_dim, h))
             layers.append(activation())
+            if dropout is not None: 
+                layers.append(nn.Dropout(dropout))
             input_dim=h 
         output_layer = nn.Linear(hidden_sizes[-1], 1)
         layers.append(output_layer)
@@ -43,8 +46,11 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                  n_estimators=5, 
                  hidden_sizes=[64, 64], 
                  alpha=0.1, 
+                 dropout=None,
+                 pred_with_dropout=False,
                  activation_str="ReLU",
                  cal_size = 0.2, 
+                 gamma = 0,
                  learning_rate=1e-3,
                  epochs=200,
                  batch_size=32,
@@ -58,13 +64,19 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                  wandb_project=None, 
                  wandb_run_name=None, 
                  n_jobs=1, 
-                 random_seed=None
+                 random_seed=None, 
+                 scale_data=True, 
+                 input_scaler=None,
+                 output_scaler=None
     ): 
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
         self.alpha = alpha
+        self.dropout = dropout
+        self.pred_with_dropout = pred_with_dropout
         self.activation_str = activation_str
         self.cal_size = cal_size
+        self.gamma = gamma
         self.learning_rate = learning_rate
         self.epochs = epochs
         self.batch_size = batch_size
@@ -82,6 +94,10 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.n_jobs = n_jobs
         self.random_seed = random_seed
 
+        self.scale_data = scale_data 
+        self.input_scaler = input_scaler or StandardScaler() 
+        self.output_scaler = output_scaler or StandardScaler()
+
         self.input_dim = None
         self.conformity_score = None
         self.models = []
@@ -93,7 +109,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
             np.random.seed(self.random_seed + model_idx)
 
         activation = get_activation(self.activation_str)
-        model = MLP(input_dim, self.hidden_sizes, activation).to(self.device)
+        model = MLP(input_dim, self.hidden_sizes, self.dropout, activation).to(self.device)
 
         optimizer = self.optimizer_cls(
             model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
@@ -122,7 +138,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                 loss = self.loss_fn(preds, yb)
                 loss.backward() 
                 optimizer.step() 
-                epoch_loss += loss 
+                epoch_loss += loss.item()
             
             if epoch % (self.epochs / 20) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
@@ -130,7 +146,11 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
             if scheduler: 
                 scheduler.step()
 
-        
+        if self.pred_with_dropout: 
+            model.train()
+        else: 
+            model.eval()
+
         test_X = X_tensor[cal_idx]
         cal_preds = model(test_X)
 
@@ -138,6 +158,9 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         return model, cal_preds
     
     def fit(self, X, y): 
+        if self.scale_data: 
+            X = self.input_scaler.fit_transform(X)
+            y = self.output_scaler.fit_transform(y.reshape(-1, 1))
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
         y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1).to(self.device)
 
@@ -151,26 +174,32 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         )
 
         self.models = [result[0] for result in results]
-        cal_preds = torch.stack([result[1] for result in results])
+        cal_preds = torch.stack([result[1] for result in results]).squeeze()
         mean_cal_preds = torch.mean(cal_preds, dim=0).squeeze()
         var_cal_preds = torch.var(cal_preds, dim=0).squeeze()
         std_cal_preds = var_cal_preds ** 0.5 
         self.residuals = torch.abs(mean_cal_preds - y_tensor[cal_idx].squeeze())
+    
+        conformity_scores = self.residuals / (std_cal_preds + self.gamma)
 
-        conformity_scores = self.residuals / std_cal_preds
         n = len(self.residuals)
         q = int((1 - self.alpha) * (n+1)) 
-        q = min(max(q, 0), n-1) 
-        self.conformity_score = torch.topk(conformity_scores, n-q).values[-1].detach().numpy()
+        q = min(q, n-1) 
+        self.conformity_score = torch.topk(conformity_scores, n-q).values[-1].detach().cpu().numpy()
         return self 
     
     def predict(self, X): 
+        if self.scale_data: 
+            X = self.input_scaler.transform(X)
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
         preds = []
 
         with torch.no_grad(): 
             for model in self.models: 
-                model.eval() 
+                if self.pred_with_dropout: 
+                    model.train()
+                else: 
+                    model.eval()
                 pred = model(X_tensor).cpu().numpy() 
                 preds.append(pred)
 
@@ -178,9 +207,14 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         mean = np.mean(preds, axis=0)
         variances = np.var(preds, axis=0, ddof=1)
         stds = variances ** 0.5
-        conformal_widths = self.conformity_score * stds 
+        conformal_widths = self.conformity_score * (stds + self.gamma) 
         lower = mean - conformal_widths 
         upper = mean + conformal_widths 
+
+        if self.scale_data: 
+            mean = self.output_scaler.inverse_transform(mean.reshape(-1, 1)).squeeze()
+            lower = self.output_scaler.inverse_transform(lower.reshape(-1, 1)).squeeze()
+            upper = self.output_scaler.inverse_transform(upper.reshape(-1, 1)).squeeze()
         return mean, lower, upper 
     
     def save(self, path):

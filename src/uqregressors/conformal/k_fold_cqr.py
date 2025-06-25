@@ -10,15 +10,17 @@ from sklearn.model_selection import KFold
 from pathlib import Path 
 import json 
 import pickle
-
+from sklearn.preprocessing import StandardScaler
 
 class QuantNN(nn.Module): 
-    def __init__(self, input_dim, hidden_sizes, activation): 
+    def __init__(self, input_dim, hidden_sizes, dropout, activation): 
         super().__init__()
         layers = []
         for h in hidden_sizes:
             layers.append(nn.Linear(input_dim, h))
             layers.append(activation())
+            if dropout is not None: 
+                layers.append(nn.Dropout(dropout))
             input_dim = h
         output_layer = nn.Linear(hidden_sizes[-1], 2)
         layers.append(output_layer)
@@ -33,7 +35,11 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             self, 
             n_estimators=5,
             hidden_sizes=[64, 64], 
+            dropout = None,
             alpha=0.1, 
+            tau_lo = None, 
+            tau_hi = None, 
+            n_jobs=1, 
             activation_str="ReLU",
             learning_rate=1e-3,
             epochs=200,
@@ -47,12 +53,17 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             use_wandb=False,
             wandb_project=None,
             wandb_run_name=None,
-            n_jobs=1, 
-            random_seed=None,
+            scale_data = True, 
+            input_scaler = None, 
+            output_scaler = None,
+            random_seed=None
     ):
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
+        self.dropout = dropout
         self.alpha = alpha
+        self.tau_lo = tau_lo or alpha / 2 
+        self.tau_hi = tau_hi or 1 - alpha / 2
         self.activation_str = activation_str
         self.learning_rate = learning_rate
         self.epochs = epochs
@@ -75,6 +86,12 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         self.residuals = []
         self.conformal_width = None
         self.input_dim = None
+        if self.n_estimators == 1: 
+            raise ValueError("n_estimators set to 1. To use a single Quantile Regressor, use a non-ensembled Quantile Regressor class")
+        self.scale_data = scale_data 
+        self.input_scaler = input_scaler or StandardScaler() 
+        self.output_scaler = output_scaler or StandardScaler()
+
 
     def quantile_loss(self, preds, y): 
         error = y.view(-1, 1) - preds
@@ -86,7 +103,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             np.random.seed(self.random_seed + model_idx)
 
         activation = get_activation(self.activation_str)
-        model = QuantNN(input_dim, self.hidden_sizes, activation).to(self.device)
+        model = QuantNN(input_dim, self.hidden_sizes, self.dropout, activation).to(self.device)
 
         optimizer = self.optimizer_cls(
             model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
@@ -106,6 +123,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             name=f"Estimator-{model_idx}"
         )
         
+        model.train()
         for epoch in range(self.epochs): 
             model.train()
             epoch_loss = 0.0 
@@ -127,35 +145,41 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         test_X = X_tensor[cal_idx]
         test_y = y_tensor[cal_idx]
         oof_preds = model(test_X)
-        loss_matrix =(oof_preds - test_y) * torch.tensor([1, -1])
+        loss_matrix =(oof_preds - test_y) * torch.tensor([1, -1], device=self.device)
         residuals = torch.max(loss_matrix, dim=1).values
         logger.finish()
         return model, residuals
     
     def fit(self, X, y): 
+        if self.scale_data:
+            X = self.input_scaler.fit_transform(X)
+            y = self.output_scaler.fit_transform(y.reshape(-1, 1))
+
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1).to(self.device)
+        y_tensor = torch.tensor(y, dtype=torch.float32).to(self.device)
 
         input_dim = X.shape[1]
         self.input_dim = input_dim
 
-        kf = KFold(n_splits=self.n_estimators)
+        kf = KFold(n_splits=self.n_estimators, shuffle=True)
 
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, train_idx, cal_idx, i)
-            for i, (train_idx, cal_idx) in enumerate(kf.split(X_tensor.numpy()))
+            for i, (train_idx, cal_idx) in enumerate(kf.split(X_tensor.detach().cpu().numpy()))
         )
 
         self.models = [result[0] for result in results]
-        self.residuals = torch.stack([result[1] for result in results], dim=0).ravel()
+        self.residuals = torch.cat([result[1] for result in results], dim=0).ravel()
 
         n = len(self.residuals)
         q = int((1 - self.alpha) * (n + 1))
-        q = min(max(q, 0), n-1)
-        self.conformal_width = torch.topk(self.residuals, n-q).values[-1].detach().numpy()
+        q = min(q, n-1)
+        self.conformal_width = torch.topk(self.residuals, n-q).values[-1].detach().cpu().numpy()
         return self
     
     def predict(self, X): 
+        if self.scale_data: 
+            X = self.input_scaler.transform(X)
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
         preds = [] 
 
@@ -175,6 +199,11 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         lower = lower_cq - self.conformal_width
         upper = upper_cq + self.conformal_width
+
+        if self.scale_data: 
+            mean = self.output_scaler.inverse_transform(mean.reshape(-1, 1)).squeeze()
+            lower = self.output_scaler.inverse_transform(lower.reshape(-1, 1)).squeeze()
+            upper = self.output_scaler.inverse_transform(upper.reshape(-1, 1)).squeeze()
 
         return mean, lower, upper
     

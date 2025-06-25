@@ -14,7 +14,10 @@ dependencies = [
   "scikit-learn",
   "matplotlib", 
   "scipy", 
-  "gpytorch"
+  "gpytorch", 
+  "seaborn", 
+  "xlrd", 
+  "openpyxl"
 ]
 
 [project.optional-dependencies]

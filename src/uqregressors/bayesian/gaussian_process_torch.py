@@ -71,8 +71,8 @@ class GPRegressorTorch:
             config=config,
         )
 
-        X_tensor = torch.tensor(X, dtype=torch.float32)
-        y_tensor = torch.tensor(y, dtype=torch.float32)
+        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
+        y_tensor = torch.tensor(y, dtype=torch.float32).to(self.device)
 
         self.train_X = X_tensor
         self.train_y = y_tensor

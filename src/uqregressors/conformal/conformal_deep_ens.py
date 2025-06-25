@@ -13,7 +13,7 @@ import json
 import pickle
 
 class MLP(nn.Module): 
-    def __init__(self, input_dim, hidden_sizes, activation): 
+    def __init__(self, input_dim, hidden_sizes, activation, device): 
         super().__init__() 
         layers = []
         for h in hidden_sizes: 
@@ -23,7 +23,7 @@ class MLP(nn.Module):
         output_layer = nn.Linear(hidden_sizes[-1], 2)
         output_layer.bias.data[1] = 0.0
         layers.append(output_layer)
-        self.model = nn.Sequential(*layers)
+        self.model = nn.Sequential(*layers).to(device)
 
     def forward(self, x): 
         return self.model(x)
@@ -144,7 +144,7 @@ class ConformalizedDeepEns(BaseEstimator, RegressorMixin):
         input_dim = X.shape[1]
         self.input_dim = input_dim
 
-        kf = KFold(n_splits=self.n_estimators)
+        kf = KFold(n_splits=self.n_estimators, shuffle=True)
 
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, train_idx, cal_idx, i)
