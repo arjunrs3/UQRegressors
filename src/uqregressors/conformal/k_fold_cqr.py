@@ -33,6 +33,7 @@ class QuantNN(nn.Module):
 class KFoldCQR(BaseEstimator, RegressorMixin): 
     def __init__(
             self, 
+            name="K_Fold_CQR_Regressor",
             n_estimators=5,
             hidden_sizes=[64, 64], 
             dropout = None,
@@ -56,8 +57,10 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             scale_data = True, 
             input_scaler = None, 
             output_scaler = None,
-            random_seed=None
+            random_seed=None, 
+            tuning_loggers = []
     ):
+        self.name = name
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
         self.dropout = dropout
@@ -91,6 +94,11 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         self.scale_data = scale_data 
         self.input_scaler = input_scaler or StandardScaler() 
         self.output_scaler = output_scaler or StandardScaler()
+
+        self._loggers = []
+        self.training_logs = None
+        self.tuning_loggers = tuning_loggers
+        self.tuning_logs = None
 
 
     def quantile_loss(self, preds, y): 
@@ -148,7 +156,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         loss_matrix =(oof_preds - test_y) * torch.tensor([1, -1], device=self.device)
         residuals = torch.max(loss_matrix, dim=1).values
         logger.finish()
-        return model, residuals
+        return model, residuals, logger
     
     def fit(self, X, y): 
         if self.scale_data:
@@ -170,14 +178,20 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         self.models = [result[0] for result in results]
         self.residuals = torch.cat([result[1] for result in results], dim=0).ravel()
+        self._loggers = [result[2] for result in results]
+
+        return self
+    
+    def predict(self, X): 
 
         n = len(self.residuals)
         q = int((1 - self.alpha) * (n + 1))
         q = min(q, n-1)
-        self.conformal_width = torch.topk(self.residuals, n-q).values[-1].detach().cpu().numpy()
-        return self
+
+        res_quantile = n-q
     
-    def predict(self, X): 
+        self.conformal_width = torch.topk(self.residuals, res_quantile).values[-1].detach().cpu().numpy()
+
         if self.scale_data: 
             X = self.input_scaler.transform(X)
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
@@ -214,13 +228,16 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         # Save config (exclude non-serializable or large objects)
         config = {
             k: v for k, v in self.__dict__.items()
-            if k not in ["models", "quantiles", "residuals", "conformal_width", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs"]
+            if k not in ["models", "quantiles", "residuals", "conformal_width", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
+                         "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
 
         config["optimizer"] = self.optimizer_cls.__class__.__name__ if self.optimizer_cls is not None else None
-        config["scheduler"] = self.optimizer_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["scheduler"] = self.scheduler_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["input_scaler"] = self.input_scaler.__class__.__name__ if self.input_scaler is not None else None 
+        config["output_scaler"] = self.output_scaler.__class__.__name__ if self.output_scaler is not None else None
 
         with open(path / "config.json", "w") as f:
             json.dump(config, f, indent=4)
@@ -238,11 +255,16 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         with open(path / "extras.pkl", 'wb') as f: 
             pickle.dump([self.optimizer_cls, 
-                        self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs], f)
+                        self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs, self.input_scaler, self.output_scaler], f)
 
+        for i, logger in enumerate(getattr(self, "_loggers", [])):
+            logger.save_to_file(path, idx=i, name="estimator")
+
+        for i, logger in enumerate(getattr(self, "tuning_loggers", [])): 
+            logger.save_to_file(path, name="tuning", idx=i)
 
     @classmethod
-    def load(cls, path, device="cpu"):
+    def load(cls, path, device="cpu", load_logs=False):
         path = Path(path)
 
         # Load config
@@ -252,6 +274,9 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         config.pop("optimizer", None)
         config.pop("scheduler", None)
+        config.pop("input_scaler", None)
+        config.pop("output_scaler", None)
+        
         input_dim = config.pop("input_dim", None)
         model = cls(**config)
 
@@ -260,7 +285,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         activation = get_activation(config["activation_str"])
         model.models = []
         for i in range(config["n_estimators"]):
-            m = QuantNN(model.input_dim, config["hidden_sizes"], activation).to(device)
+            m = QuantNN(model.input_dim, config["hidden_sizes"], config["dropout"], activation).to(device)
             m.load_state_dict(torch.load(path / f"model_{i}.pt", map_location=device))
             model.models.append(m)
 
@@ -277,10 +302,31 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             model.quantiles = None
 
         with open(path / "extras.pkl", 'rb') as f: 
-            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs = pickle.load(f)
+            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
 
         model.optimizer_cls = optimizer_cls 
         model.optimizer_kwargs = optimizer_kwargs 
         model.scheduler_cls = scheduler_cls 
         model.scheduler_kwargs = scheduler_kwargs
+        model.input_scaler = input_scaler
+        model.output_scaler = output_scaler
+
+        if load_logs: 
+            logs_path = path / "logs"
+            training_logs = [] 
+            tuning_logs = []
+            if logs_path.exists() and logs_path.is_dir(): 
+                estimator_log_files = sorted(logs_path.glob("estimator_*.log"))
+                for log_file in estimator_log_files:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        training_logs.append(f.read())
+
+                tuning_log_files = sorted(logs_path.glob("tuning_*.log"))
+                for log_file in tuning_log_files: 
+                    with open(log_file, "r", encoding="utf-8") as f: 
+                        tuning_logs.append(f.read())
+
+            model.training_logs = training_logs
+            model.tuning_logs = tuning_logs
+            
         return model

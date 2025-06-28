@@ -43,6 +43,7 @@ class MLP(nn.Module):
     
 class ConformalEnsRegressor(BaseEstimator, RegressorMixin): 
     def __init__(self, 
+                 name="Conformal_Ens_Regressor",
                  n_estimators=5, 
                  hidden_sizes=[64, 64], 
                  alpha=0.1, 
@@ -67,8 +68,10 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                  random_seed=None, 
                  scale_data=True, 
                  input_scaler=None,
-                 output_scaler=None
+                 output_scaler=None,
+                 tuning_loggers = []
     ): 
+        self.name = name
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
         self.alpha = alpha
@@ -99,9 +102,15 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.output_scaler = output_scaler or StandardScaler()
 
         self.input_dim = None
+        self.conformity_scores = None
         self.conformity_score = None
         self.models = []
         self.residuals = []
+
+        self._loggers = []
+        self.training_logs = None
+        self.tuning_loggers = tuning_loggers
+        self.tuning_logs = None
 
     def _train_single_model(self, X_tensor, y_tensor, input_dim, train_idx, cal_idx, model_idx): 
         if self.random_seed is not None: 
@@ -155,7 +164,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         cal_preds = model(test_X)
 
         logger.finish()
-        return model, cal_preds
+        return model, cal_preds, logger
     
     def fit(self, X, y): 
         if self.scale_data: 
@@ -175,20 +184,27 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
 
         self.models = [result[0] for result in results]
         cal_preds = torch.stack([result[1] for result in results]).squeeze()
+        self._loggers = [result[2] for result in results]
+
         mean_cal_preds = torch.mean(cal_preds, dim=0).squeeze()
         var_cal_preds = torch.var(cal_preds, dim=0).squeeze()
         std_cal_preds = var_cal_preds ** 0.5 
         self.residuals = torch.abs(mean_cal_preds - y_tensor[cal_idx].squeeze())
     
-        conformity_scores = self.residuals / (std_cal_preds + self.gamma)
+        self.conformity_scores = self.residuals / (std_cal_preds + self.gamma)
 
-        n = len(self.residuals)
-        q = int((1 - self.alpha) * (n+1)) 
-        q = min(q, n-1) 
-        self.conformity_score = torch.topk(conformity_scores, n-q).values[-1].detach().cpu().numpy()
         return self 
     
     def predict(self, X): 
+        
+        n = len(self.residuals)
+        q = int((1 - self.alpha) * (n+1)) 
+        q = min(q, n-1) 
+
+        res_quantile = n-q
+
+        self.conformity_score = torch.topk(self.conformity_scores, res_quantile).values[-1].detach().cpu().numpy()
+        
         if self.scale_data: 
             X = self.input_scaler.transform(X)
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
@@ -221,70 +237,22 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
-        # Save config
-        config = self.__dict__.copy()
-        # Remove non-serializable entries
-        config.pop("models", None)
-        config.pop("residuals", None)
-        config.pop("conformity_score", None)
-        with open(path / "config.json", "w") as f:
-            json.dump(config, f, indent=4)
-
-        # Save each model
-        for i, model in enumerate(self.models):
-            torch.save(model.state_dict(), path / f"model_{i}.pt")
-
-        # Save residuals and conformity score
-        torch.save({
-            "residuals": self.residuals,
-            "conformity_score": self.conformity_score
-        }, path / "extras.pt")
-
-    @classmethod
-    def load(cls, path):
-        path = Path(path)
-
-        with open(path / "config.json", "r") as f:
-            config = json.load(f)
-
-        model = cls(**config)
-
-        # Recreate models
-        model.models = []
-        activation = get_activation(model.activation_str)
-        input_dim = config["hidden_sizes"][0]  # or store explicitly in config
-
-        for i in range(config["n_estimators"]):
-            m = MLP(input_dim, model.hidden_sizes, activation).to(model.device)
-            m.load_state_dict(torch.load(path / f"model_{i}.pt", map_location=model.device))
-            model.models.append(m)
-
-        # Load extras
-        extras = torch.load(path / "extras.pt", map_location=model.device)
-        model.residuals = extras["residuals"]
-        model.conformity_score = extras["conformity_score"]
-
-        return model
-    
-    def save(self, path):
-        path = Path(path)
-        path.mkdir(parents=True, exist_ok=True)
-
         # Save config (exclude non-serializable or large objects)
         config = {
             k: v for k, v in self.__dict__.items()
-            if k not in ["models", "residuals", "conformity_score", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs"]
+            if k not in ["models", "residuals", "conformity_score", "conformity_scores", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
+                         "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
 
         config["optimizer"] = self.optimizer_cls.__class__.__name__ if self.optimizer_cls is not None else None
-        config["scheduler"] = self.optimizer_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["scheduler"] = self.scheduler_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["input_scaler"] = self.input_scaler.__class__.__name__ if self.input_scaler is not None else None 
+        config["output_scaler"] = self.output_scaler.__class__.__name__ if self.output_scaler is not None else None
 
         with open(path / "config.json", "w") as f:
             json.dump(config, f, indent=4)
-
-
 
         # Save model weights
         for i, model in enumerate(self.models):
@@ -293,16 +261,23 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         # Save residuals and conformity score
         torch.save({
             "residuals": self.residuals.cpu(),
-            "conformity_score": self.conformity_score
+            "conformity_score": self.conformity_score, 
+            "conformity_scores": self.conformity_scores
         }, path / "extras.pt")
 
         with open(path / "extras.pkl", 'wb') as f: 
             pickle.dump([self.optimizer_cls, 
-                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs], f)
+                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs, self.input_scaler, self.output_scaler], f)
+
+        for i, logger in enumerate(getattr(self, "_loggers", [])):
+            logger.save_to_file(path, idx=i, name="estimator")
+
+        for i, logger in enumerate(getattr(self, "tuning_loggers", [])): 
+            logger.save_to_file(path, name="tuning", idx=i)
 
 
     @classmethod
-    def load(cls, path, device="cpu"):
+    def load(cls, path, device="cpu", load_logs=False):
         path = Path(path)
 
         # Load config
@@ -312,18 +287,21 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
 
         config.pop("optimizer", None)
         config.pop("scheduler", None)
+        config.pop("input_scaler", None)
+        config.pop("output_scaler", None)
+        
         input_dim = config.pop("input_dim", None)
         model = cls(**config)
 
         with open(path / "extras.pkl", 'rb') as f: 
-            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs = pickle.load(f)
+            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
         
         # Recreate models
         model.input_dim = input_dim
         activation = get_activation(config["activation_str"])
         model.models = []
         for i in range(config["n_estimators"]):
-            m = MLP(model.input_dim, config["hidden_sizes"], activation).to(device)
+            m = MLP(model.input_dim, config["hidden_sizes"], config["dropout"], activation).to(device)
             m.load_state_dict(torch.load(path / f"model_{i}.pt", map_location=device))
             model.models.append(m)
 
@@ -333,13 +311,35 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
             extras = torch.load(extras_path, map_location=device, weights_only=False)
             model.residuals = extras.get("residuals", None)
             model.conformity_score = extras.get("conformity_score", None)
+            model.conformity_scores = extras.get("conformity_scores", None)
         else:
             model.residuals = None
             model.conformity_score = None
+            model.conformity_scores = None
 
         model.optimizer_cls = optimizer_cls 
         model.optimizer_kwargs = optimizer_kwargs 
         model.scheduler_cls = scheduler_cls 
         model.scheduler_kwargs = scheduler_kwargs
+        model.input_scaler = input_scaler 
+        model.output_scaler = output_scaler
+
+        if load_logs: 
+            logs_path = path / "logs"
+            training_logs = [] 
+            tuning_logs = []
+            if logs_path.exists() and logs_path.is_dir(): 
+                estimator_log_files = sorted(logs_path.glob("estimator_*.log"))
+                for log_file in estimator_log_files:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        training_logs.append(f.read())
+
+                tuning_log_files = sorted(logs_path.glob("tuning_*.log"))
+                for log_file in tuning_log_files: 
+                    with open(log_file, "r", encoding="utf-8") as f: 
+                        tuning_logs.append(f.read())
+
+            model.training_logs = training_logs
+            model.tuning_logs = tuning_logs
 
         return model

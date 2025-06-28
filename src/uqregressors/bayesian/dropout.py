@@ -35,14 +35,11 @@ class MLP(nn.Module):
 class MCDropoutRegressor(BaseEstimator, RegressorMixin):
     def __init__(
         self,
+        name="MC_Dropout_Regressor",
         hidden_sizes=[64, 64],
         dropout=0.1,
         tau=1.0,
-        tune_tau=False,
-        prior_length_scale=1e-2, 
         use_paper_weight_decay=True,
-        BO_calls=30,
-        BO_epochs=40,
         alpha=0.1,
         activation_str="ReLU",
         n_samples=100,
@@ -61,21 +58,19 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         random_seed=None,
         scale_data=True, 
         input_scaler=None,
-        output_scaler=None
+        output_scaler=None, 
+        tuning_loggers = []
     ):
+        self.name=name
         self.hidden_sizes = hidden_sizes
         self.dropout = dropout
         self.tau = tau
-        self.tune_tau = tune_tau
-        self.prior_length_scale = prior_length_scale
         self.use_paper_weight_decay = use_paper_weight_decay
-        self.BO_calls = BO_calls
         self.alpha = alpha
         self.activation_str = activation_str
         self.n_samples = n_samples
         self.learning_rate = learning_rate
         self.epochs = epochs
-        self.BO_epochs = BO_epochs
         self.batch_size = batch_size
         self.optimizer_cls = optimizer_cls
         self.optimizer_kwargs = optimizer_kwargs or {}
@@ -96,22 +91,15 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.input_scaler = input_scaler or StandardScaler()
         self.output_scaler = output_scaler or StandardScaler()
 
+        self._loggers = [] 
+        self.training_logs = None
+        self.tuning_loggers = tuning_loggers 
+        self.tuning_logs = None
+
     def fit(self, X, y): 
         if self.scale_data: 
             X = self.input_scaler.fit_transform(X)
             y = self.output_scaler.fit_transform(y.reshape(-1, 1))
-
-        if self.tune_tau:
-            X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=self.random_seed)
-        
-            X_tensor = torch.tensor(X_train, dtype=torch.float32).to(self.device)
-            y_tensor = torch.tensor(y_train, dtype=torch.float32).to(self.device)
-            input_dim = X.shape[1]
-            self.input_dim = input_dim
-
-            print("Tuning tau...")
-            self.tau = self._tune_tau(X_tensor, y_tensor, X_val, y_val)
-            print(f"Best tau found: {self.tau:.4f}")
         
         X_train, y_train = X, y
         X_tensor = torch.tensor(X_train, dtype=torch.float32).to(self.device)
@@ -119,23 +107,17 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         input_dim = X.shape[1]
         self.input_dim = input_dim
         
-        self._fit_single_model(X_tensor, y_tensor, mode="FIT")
+        model, logger = self._fit_single_model(X_tensor, y_tensor)
+        self._loggers.append(logger)
 
-    def _fit_single_model(self, X_tensor, y_tensor, mode="FIT"):
+    def _fit_single_model(self, X_tensor, y_tensor):
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
             np.random.seed(self.random_seed)
         
-        if mode == "FIT": 
-            epochs = self.epochs 
-        elif mode == "BO": 
-            epochs = self.BO_epochs 
-        else: 
-            raise ValueError("mode passed to _fit_single_model is unrecognized")
-        
         config = {
             "learning_rate": self.learning_rate,
-            "epochs": epochs,
+            "epochs": self.epochs,
             "batch_size": self.batch_size,
         }
 
@@ -163,7 +145,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
         self.model.train()
-        for epoch in range(epochs):
+        for epoch in range(self.epochs):
             epoch_loss = 0.0
             for xb, yb in dataloader: 
                 optimizer.zero_grad()
@@ -181,46 +163,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
 
         logger.finish()
 
-        return self
-
-    def _tune_tau(self, X_train, y_train, X_val, y_val):
-        """
-        Use Bayesian optimization to tune tau by maximizing predictive log-likelihood.
-        """
-        def objective(tau):
-            if self.use_paper_weight_decay:
-                N = len(X_train)
-                l = self.prior_length_scale
-                p = 1 - self.dropout  # Keep probability
-                weight_decay = (p * l**2) / (2 * N * tau[0])
-                print(f"Setting weight decay to {weight_decay:.6f}")
-                self.optimizer_kwargs["weight_decay"] = weight_decay
-
-            self._fit_single_model(X_train, y_train, mode="BO")
-            # tau is a list with one element
-            return -self._predictive_log_likelihood(X_val, y_val, tau[0])
-
-        search_space = [Real(1e-3, 1e3, prior='log-uniform', name='tau')]
-
-        result = gp_minimize(
-            func=objective,
-            dimensions=search_space,
-            n_calls=self.BO_calls,
-            n_random_starts=5,
-            random_state=self.random_seed or 42,
-            verbose=True
-        )
-
-        best_tau = result.x[0]
-        if self.use_paper_weight_decay:
-                N = len(X_train)
-                l = self.prior_length_scale
-                p = 1 - self.dropout  # Keep probability
-                weight_decay = (p * l**2) / (2 * N * best_tau)
-                print(f"Setting weight decay to {weight_decay:.6f}")
-                self.optimizer_kwargs["weight_decay"] = weight_decay
-
-        return best_tau
+        return self, logger
 
     def predict(self, X):
         if self.random_seed is not None: 
@@ -262,26 +205,35 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         # Save config (exclude non-serializable or large objects)
         config = {
             k: v for k, v in self.__dict__.items()
-            if k not in ["optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs"]
+            if k not in ["optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", "input_scaler", 
+                         "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
+        
         config["optimizer"] = self.optimizer_cls.__class__.__name__ if self.optimizer_cls is not None else None
-        config["scheduler"] = self.optimizer_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["scheduler"] = self.scheduler_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["input_scaler"] = self.input_scaler.__class__.__name__ if self.input_scaler is not None else None 
+        config["output_scaler"] = self.output_scaler.__class__.__name__ if self.output_scaler is not None else None
 
         with open(path / "config.json", "w") as f:
             json.dump(config, f, indent=4)
 
         with open(path / "extras.pkl", 'wb') as f: 
             pickle.dump([self.optimizer_cls, 
-                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs], f)
+                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs, self.input_scaler, self.output_scaler], f)
 
         # Save model weights
         torch.save(self.model.state_dict(), path / f"model.pt")
 
+        for i, logger in enumerate(getattr(self, "_loggers", [])):
+            logger.save_to_file(path, idx=i, name="estimator")
+
+        for i, logger in enumerate(getattr(self, "tuning_loggers", [])): 
+            logger.save_to_file(path, name="tuning", idx=i)
 
     @classmethod
-    def load(cls, path, device="cpu"):
+    def load(cls, path, device="cpu", load_logs=False):
         path = Path(path)
 
         # Load config
@@ -291,11 +243,14 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
 
         config.pop("optimizer", None)
         config.pop("scheduler", None)
+        config.pop("input_scaler", None)
+        config.pop("output_scaler", None)
+        
         input_dim = config.pop("input_dim", None)
         model = cls(**config)
 
         with open(path / "extras.pkl", 'rb') as f: 
-            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs = pickle.load(f)
+            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
 
         # Recreate models
         model.input_dim = input_dim
@@ -308,6 +263,26 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         model.optimizer_kwargs = optimizer_kwargs 
         model.scheduler_cls = scheduler_cls 
         model.scheduler_kwargs = scheduler_kwargs
+        model.input_scaler = input_scaler 
+        model.output_scaler = output_scaler
+
+        if load_logs: 
+            logs_path = path / "logs"
+            training_logs = [] 
+            tuning_logs = []
+            if logs_path.exists() and logs_path.is_dir(): 
+                estimator_log_files = sorted(logs_path.glob("estimator_*.log"))
+                for log_file in estimator_log_files:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        training_logs.append(f.read())
+
+                tuning_log_files = sorted(logs_path.glob("tuning_*.log"))
+                for log_file in tuning_log_files: 
+                    with open(log_file, "r", encoding="utf-8") as f: 
+                        tuning_logs.append(f.read())
+
+            model.training_logs = training_logs
+            model.tuning_logs = tuning_logs
         
         return model
     

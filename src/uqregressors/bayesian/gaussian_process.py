@@ -8,9 +8,10 @@ import json
 import pickle 
 
 class GPRegressor: 
-    def __init__(self, kernel = RBF(), 
+    def __init__(self, name="GP_Regressor", kernel = RBF(), 
                  alpha=0.1, 
                  gp_kwargs=None):
+        self.name = name
         self.kernel = kernel 
         self.alpha = alpha 
         self.gp_kwargs = gp_kwargs or {}
@@ -48,7 +49,7 @@ class GPRegressor:
             pickle.dump(self, file)
 
     @classmethod
-    def load(cls, path, device="cpu"): 
+    def load(cls, path, device="cpu", load_logs=False): 
         path = Path(path)
 
         with open(path / "model.pkl", 'rb') as file: 

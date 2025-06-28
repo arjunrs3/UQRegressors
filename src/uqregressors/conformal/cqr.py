@@ -31,6 +31,7 @@ class MLP(nn.Module):
 class ConformalQuantileRegressor(BaseEstimator, RegressorMixin): 
     def __init__(
             self, 
+            name="Conformal_Quantile_Regressor",
             hidden_sizes = [64, 64],
             cal_size = 0.2, 
             dropout = None, 
@@ -54,7 +55,9 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             input_scaler=None,
             output_scaler=None, 
             random_seed=None,
+            tuning_loggers = []
     ):
+        self.name = name
         self.hidden_sizes = hidden_sizes 
         self.cal_size = cal_size 
         self.dropout = dropout 
@@ -88,6 +91,10 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.input_scaler = input_scaler or StandardScaler() 
         self.output_scaler = output_scaler or StandardScaler()
 
+        self._loggers = []
+        self.training_logs = None
+        self.tuning_loggers = tuning_loggers
+        self.tuning_logs = None
 
     def quantile_loss(self, preds, y): 
         error = y.view(-1, 1) - preds 
@@ -162,16 +169,21 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         oof_preds = self.model(X_cal)
         loss_matrix = (oof_preds - y_cal) * torch.tensor([1, -1], device=self.device)
         self.residuals = torch.max(loss_matrix, dim=1).values
-        n = len(self.residuals)
-        q = int((1 - self.alpha) * (n + 1))
-        q = min(q, n-1)
-        self.conformal_width = torch.topk(self.residuals, n-q).values[-1].detach().cpu().numpy()
 
         logger.finish()
+        self._loggers.append(logger)
         return self
 
     def predict(self, X): 
         self.model.eval()
+
+        n = len(self.residuals)
+        q = int((1 - self.alpha) * (n + 1))
+        q = min(q, n-1)
+        res_quantile = n-q
+
+        self.conformal_width = torch.topk(self.residuals, res_quantile).values[-1].detach().cpu().numpy()
+
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
             np.random.seed(self.random_seed)
@@ -186,14 +198,117 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         lower = lower_cq - self.conformal_width 
         upper = upper_cq + self.conformal_width 
         mean = (lower + upper) / 2 
+
         if self.scale_data: 
-            mean = self.output_scaler.inverse_transform(mean)
-            lower = self.output_scaler.inverse_transform(lower)
-            upper = self.output_scaler.inverse_transform(upper)
+            mean = self.output_scaler.inverse_transform(mean).squeeze()
+            lower = self.output_scaler.inverse_transform(lower).squeeze()
+            upper = self.output_scaler.inverse_transform(upper).squeeze()
+        else: 
+            mean = mean.squeeze() 
+            lower = lower.squeeze() 
+            upper = upper.squeeze()
+
         return mean, lower, upper 
     
     def save(self, path): 
-        raise NotImplementedError("Save method not implemented")
+        path = Path(path)
+        path.mkdir(parents=True, exist_ok=True)
+
+        config = {
+            k: v for k, v in self.__dict__.items()
+            if k not in ["model", "residuals", "conformal_width", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", "input_scaler", "output_scaler", "quantiles", 
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+            and not callable(v)
+            and not isinstance(v, (torch.nn.Module,))
+        }
     
-    def load(cls, path, device="cpu"): 
-        raise NotImplementedError("Load method not implemented")
+
+        config["optimizer"] = self.optimizer_cls.__class__.__name__ if self.optimizer_cls is not None else None
+        config["scheduler"] = self.scheduler_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["input_scaler"] = self.input_scaler.__class__.__name__ if self.input_scaler is not None else None 
+        config["output_scaler"] = self.output_scaler.__class__.__name__ if self.output_scaler is not None else None
+
+        with open(path / "config.json", "w") as f:
+            json.dump(config, f, indent=4)
+
+        with open(path / "extras.pkl", 'wb') as f: 
+            pickle.dump([self.optimizer_cls, 
+                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs, self.input_scaler, self.output_scaler], f)
+
+        # Save model weights
+        torch.save(self.model.state_dict(), path / f"model.pt")
+
+        torch.save({
+            "conformal_width": self.conformal_width, 
+            "residuals": self.residuals,
+            "quantiles": self.quantiles
+        }, path / "extras.pt")
+
+        for i, logger in enumerate(getattr(self, "_loggers", [])):
+            logger.save_to_file(path, idx=i, name="estimator")
+
+        for i, logger in enumerate(getattr(self, "tuning_loggers", [])): 
+            logger.save_to_file(path, name="tuning", idx=i)
+
+    @classmethod
+    def load(cls, path, device="cpu", load_logs=False): 
+        path = Path(path)
+        with open(path / "config.json", "r") as f:
+            config = json.load(f)
+        config["device"] = device
+
+        config.pop("optimizer", None)
+        config.pop("scheduler", None)
+        config.pop("input_scaler", None)
+        config.pop("output_scaler", None)
+        
+        input_dim = config.pop("input_dim", None)
+        model = cls(**config)
+
+        with open(path / "extras.pkl", 'rb') as f: 
+            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
+
+        # Recreate models
+        model.input_dim = input_dim
+        activation = get_activation(config["activation_str"])
+
+        model.model = MLP(model.input_dim, config["hidden_sizes"], model.dropout, activation).to(device)
+        model.model.load_state_dict(torch.load(path / f"model.pt", map_location=device))
+
+        extras_path = path / "extras.pt"
+        if extras_path.exists():
+            extras = torch.load(extras_path, map_location=device, weights_only=False)
+            model.residuals = extras.get("residuals", None)
+            model.conformal_width = extras.get("conformal_width", None)
+            model.quantiles = extras.get("quantiles", None)
+        else:
+            model.residuals = None
+            model.conformal_width = None
+            model.quantiles = None
+
+        model.optimizer_cls = optimizer_cls 
+        model.optimizer_kwargs = optimizer_kwargs 
+        model.scheduler_cls = scheduler_cls 
+        model.scheduler_kwargs = scheduler_kwargs
+        model.input_scaler = input_scaler 
+        model.output_scaler = output_scaler
+        
+        if load_logs: 
+            logs_path = path / "logs"
+            training_logs = [] 
+            tuning_logs = []
+            if logs_path.exists() and logs_path.is_dir(): 
+                estimator_log_files = sorted(logs_path.glob("estimator_*.log"))
+                for log_file in estimator_log_files:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        training_logs.append(f.read())
+
+                tuning_log_files = sorted(logs_path.glob("tuning_*.log"))
+                for log_file in tuning_log_files: 
+                    with open(log_file, "r", encoding="utf-8") as f: 
+                        tuning_logs.append(f.read())
+
+            model.training_logs = training_logs
+            model.tuning_logs = tuning_logs
+
+        return model

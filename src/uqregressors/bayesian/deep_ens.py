@@ -40,6 +40,7 @@ class MLP(nn.Module):
 class DeepEnsembleRegressor(BaseEstimator, RegressorMixin): 
     def __init__(
         self,
+        name = "Deep_Ensemble_Regressor",
         n_estimators=5,
         hidden_sizes=[64, 64],
         alpha=0.1,
@@ -61,8 +62,10 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         scale_data=True, 
         input_scaler=None,
         scale_output_data=True,
-        output_scaler=None
+        output_scaler=None, 
+        tuning_loggers = [],
     ):
+        self.name=name
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
         self.alpha = alpha
@@ -93,6 +96,11 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             self.input_scaler = input_scaler or StandardScaler()
         if scale_output_data:
             self.output_scaler = output_scaler or StandardScaler()
+
+        self._loggers = []
+        self.training_logs = None
+        self.tuning_loggers = tuning_loggers
+        self.tuning_logs = None
 
     def nll_loss(self, preds, y): 
         means = preds[:, 0]
@@ -154,7 +162,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
                 scheduler.step()
 
         logger.finish()
-        return model 
+        return model, logger
     
     def fit(self, X, y): 
 
@@ -169,10 +177,13 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         input_dim = X.shape[1]
         self.input_dim = input_dim
 
-        self.models = Parallel(n_jobs=self.n_jobs)(
+        results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, i)
             for i in range(self.n_estimators)
         )
+
+        self.models, self._loggers = zip(*results)
+
         return self
     
     def predict(self, X): 
@@ -214,28 +225,36 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         # Save config (exclude non-serializable or large objects)
         config = {
             k: v for k, v in self.__dict__.items()
-            if k not in ["models", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs"]
+            if k not in ["models", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
+                         "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
 
         config["optimizer"] = self.optimizer_cls.__class__.__name__ if self.optimizer_cls is not None else None
-        config["scheduler"] = self.optimizer_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["scheduler"] = self.scheduler_cls.__class__.__name__ if self.scheduler_cls is not None else None
+        config["input_scaler"] = self.input_scaler.__class__.__name__ if self.input_scaler is not None else None 
+        config["output_scaler"] = self.output_scaler.__class__.__name__ if self.output_scaler is not None else None
 
         with open(path / "config.json", "w") as f:
             json.dump(config, f, indent=4)
 
         with open(path / "extras.pkl", 'wb') as f: 
             pickle.dump([self.optimizer_cls, 
-                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs], f)
+                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs, self.input_scaler, self.output_scaler], f)
 
         # Save model weights
         for i, model in enumerate(self.models):
             torch.save(model.state_dict(), path / f"model_{i}.pt")
 
+        for i, logger in enumerate(getattr(self, "_loggers", [])):
+            logger.save_to_file(path, idx=i, name="estimator")
+
+        for i, logger in enumerate(getattr(self, "tuning_loggers", [])): 
+            logger.save_to_file(path, name="tuning", idx=i)
 
     @classmethod
-    def load(cls, path, device="cpu"):
+    def load(cls, path, device="cpu", load_logs=False):
         path = Path(path)
 
         # Load config
@@ -245,6 +264,9 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
 
         config.pop("optimizer", None)
         config.pop("scheduler", None)
+        config.pop("input_scaler", None)
+        config.pop("output_scaler", None)
+
         input_dim = config.pop("input_dim", None)
         model = cls(**config)
 
@@ -258,12 +280,32 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             model.models.append(m)
 
         with open(path / "extras.pkl", 'rb') as f: 
-            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs = pickle.load(f)
+            optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
 
         model.optimizer_cls = optimizer_cls 
         model.optimizer_kwargs = optimizer_kwargs 
         model.scheduler_cls = scheduler_cls 
         model.scheduler_kwargs = scheduler_kwargs
+        model.input_scaler = input_scaler 
+        model.output_scaler = output_scaler
+
+        if load_logs: 
+            logs_path = path / "logs"
+            training_logs = [] 
+            tuning_logs = []
+            if logs_path.exists() and logs_path.is_dir(): 
+                estimator_log_files = sorted(logs_path.glob("estimator_*.log"))
+                for log_file in estimator_log_files:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        training_logs.append(f.read())
+
+                tuning_log_files = sorted(logs_path.glob("tuning_*.log"))
+                for log_file in tuning_log_files: 
+                    with open(log_file, "r", encoding="utf-8") as f: 
+                        tuning_logs.append(f.read())
+
+            model.training_logs = training_logs
+            model.tuning_logs = tuning_logs
 
         return model
 

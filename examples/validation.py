@@ -1,13 +1,12 @@
 import numpy as np 
 import torch
 from sklearn.model_selection import train_test_split 
-from sklearn.preprocessing import StandardScaler 
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.utils.validate_dataset import clean_dataset, validate_dataset
 from uqregressors.metrics.metrics import compute_all_metrics
-from uqregressors.utils.io import load_unformatted_dataset
-from uqregressors.conformal.conformal_split import ConformalQuantileRegressor
+from uqregressors.utils.data_loader import load_unformatted_dataset
+from uqregressors.conformal.cqr import ConformalQuantileRegressor
 from uqregressors.conformal.k_fold_cqr import KFoldCQR
 from uqregressors.conformal.conformal_ens import ConformalEnsRegressor
 from pathlib import Path
@@ -42,7 +41,7 @@ def run_regressor_test(BASE_SAVE_DIR, model, seed, filename, test_size):
         #"kin8nm": "kin8nm.arff", 
         #"naval": "naval_propulsion.txt", 
         #"power": "power_plant.xlsx", 
-        "protein": "protein_structure.csv", 
+        #"protein": "protein_structure.csv", 
         #"wine": "winequality-red.csv", 
         #"yacht": "yacht_hydrodynamics.txt"
     }
@@ -76,11 +75,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dropout = MCDropoutRegressor(
         hidden_sizes = [50], 
         dropout = 0.05, 
-        tune_tau=True, 
         use_paper_weight_decay=True,
-        prior_length_scale=0.01, 
-        BO_calls=30,
-        BO_epochs=40,
         alpha = 0.05, 
         n_samples = 100, 
         epochs = 400, 
@@ -136,7 +131,7 @@ conformal_ens = ConformalEnsRegressor(
     hidden_sizes=[64, 64], 
     n_estimators=5, 
     cal_size=0.5,
-    n_jobs = 3, 
+    n_jobs = 2, 
     alpha=0.1, 
     dropout=0.1, 
     pred_with_dropout=False,
@@ -150,6 +145,7 @@ conformal_ens = ConformalEnsRegressor(
 )
 
 if __name__ == "__main__": 
+    torch.multiprocessing.set_start_method('spawn', force=True)
     BASE_SAVE_DIR = Path.home() / ".uqregressors" / "validation"
     BASE_SAVE_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Using device: {device}")
@@ -157,10 +153,10 @@ if __name__ == "__main__":
 
     models = {
         #"deep_ens": (deep_ens, 0.05),
-        #"dropout_BO": (dropout, 0.1),
-        "cqr": (cqr, 0.2),
-        "conformal_ens": (conformal_ens, 0.2),
-        "k_fold_cqr": (k_fold_cqr, 0.2),
+        "dropout": (dropout, 0.1),
+        #"cqr": (cqr, 0.2),
+        #"conformal_ens": (conformal_ens, 0.2),
+        #"k_fold_cqr": (k_fold_cqr, 0.2),
     }
 
     for name, (model, test_size) in models.items(): 

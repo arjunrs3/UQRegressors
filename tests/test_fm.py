@@ -1,21 +1,17 @@
 import numpy as np
 import torch
-import os
-import json
-from pathlib import Path
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
-from datetime import datetime
 
 # Replace with actual import paths
 from uqregressors.conformal.conformal_ens import ConformalEnsRegressor
-from uqregressors.conformal.conformal_deep_ens import ConformalizedDeepEns
 from uqregressors.conformal.k_fold_cqr import KFoldCQR
+from uqregressors.conformal.cqr import ConformalQuantileRegressor
 from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.bayesian.gaussian_process import GPRegressor
 from uqregressors.bayesian.gaussian_process_torch import GPRegressorTorch
-from uqregressors.utils.io import save_model, load_model
+from uqregressors.utils.file_manager import FileManager
 
 # Set random seed for reproducibility
 np.random.seed(42)
@@ -27,7 +23,8 @@ def generate_data(n_samples=200, n_features=5):
     y = np.sin(X[:, 0]) + X[:, 1] ** 2 + np.random.normal(0, 0.1, size=n_samples)
     return X, y
 
-def test_regressor_io(regressor_class, regressor_name):
+def test_model_save_load(regressor_class, regressor_name):
+    fm = FileManager()
     print(f"\nTesting {regressor_name}...")
 
     # Create synthetic data
@@ -47,7 +44,7 @@ def test_regressor_io(regressor_class, regressor_name):
     mse = mean_squared_error(y_test, mean_pred)
 
     # Save everything
-    save_path = save_model(
+    save_path = fm.save_model(
         reg,
         metrics={"mse": mse},
         X_train=X_train, 
@@ -57,7 +54,7 @@ def test_regressor_io(regressor_class, regressor_name):
     )
 
     # Load everything
-    load_dict = load_model(regressor_class, save_path)
+    load_dict = fm.load_model(regressor_class, save_path, load_logs=True)
     mse = load_dict["metrics"]["mse"]
     loaded_model = load_dict["model"]
     X_test = load_dict["X_test"]
@@ -73,7 +70,7 @@ def test_regressor_io(regressor_class, regressor_name):
 # List of regressors to test
 regressors_to_test = [
     (ConformalEnsRegressor, "ConformalEnsRegressor"),
-    (ConformalizedDeepEns, "ConformalDeepEns"), 
+    (ConformalQuantileRegressor, "ConformalQuantileRegressor"),
     (DeepEnsembleRegressor, "DeepEnsembleRegressor"), 
     (MCDropoutRegressor, "MCDropoutRegressor"), 
     (GPRegressor, "GaussianProcessRegressor"), 
@@ -83,4 +80,4 @@ regressors_to_test = [
 
 if __name__ == "__main__":
     for reg_cls, reg_name in regressors_to_test:
-        test_regressor_io(reg_cls, reg_name)
+        test_model_save_load(reg_cls, reg_name)

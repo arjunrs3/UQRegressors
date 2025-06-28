@@ -19,6 +19,7 @@ class ExactGP(gpytorch.models.ExactGP):
 
 class GPRegressorTorch: 
     def __init__(self, 
+                 name="BBMM_GP_Regressor",
                  kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel()), 
                  likelihood=gpytorch.likelihoods.GaussianLikelihood(), 
                  alpha=0.1,
@@ -33,9 +34,10 @@ class GPRegressorTorch:
                  use_wandb=False,
                  wandb_project=None,
                  wandb_run_name=None, 
-                 random_seed=None
+                 random_seed=None, 
+                 tuning_loggers=[],
             ):
-        
+        self.name = name
         self.kernel = kernel 
         self.likelihood = likelihood
         self.alpha = alpha 
@@ -55,6 +57,11 @@ class GPRegressorTorch:
         self.train_X = None 
         self.train_y = None
 
+        self._loggers = []
+        self.training_logs = None 
+        self.tuning_loggers = tuning_loggers 
+        self.tuning_logs = None
+
     def fit(self, X, y): 
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
@@ -72,7 +79,7 @@ class GPRegressorTorch:
         )
 
         X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y, dtype=torch.float32).to(self.device)
+        y_tensor = torch.tensor(y.ravel(), dtype=torch.float32).to(self.device)
 
         self.train_X = X_tensor
         self.train_y = y_tensor
@@ -106,6 +113,8 @@ class GPRegressorTorch:
                 scheduler.step()
             if epoch % (self.epochs / 20) == 0:
                 logger.log({"epoch": epoch, "train_loss": loss})
+        
+        self._loggers.append(logger)
 
     def predict(self, X):
         X = torch.tensor(X, dtype=torch.float32).to(self.device)
@@ -136,7 +145,8 @@ class GPRegressorTorch:
         # Save config (exclude non-serializable or large objects)
         config = {
             k: v for k, v in self.__dict__.items()
-            if k not in ["model", "kernel", "likelihood", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs"]
+            if k not in ["model", "kernel", "likelihood", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module, torch.Tensor))
         }
@@ -154,8 +164,14 @@ class GPRegressorTorch:
         torch.save(self.model.state_dict(), path / f"model.pt")
         torch.save([self.train_X, self.train_y], path / f"train.pt")
 
+        for i, logger in enumerate(getattr(self, "_loggers", [])):
+            logger.save_to_file(path, idx=i, name="estimator")
+
+        for i, logger in enumerate(getattr(self, "tuning_loggers", [])): 
+            logger.save_to_file(path, name="tuning", idx=i)
+
     @classmethod
-    def load(cls, path, device="cpu"):
+    def load(cls, path, device="cpu", load_logs=False):
         path = Path(path)
 
         # Load config
@@ -178,5 +194,23 @@ class GPRegressorTorch:
         model.optimizer_kwargs = optimizer_kwargs 
         model.scheduler_cls = scheduler_cls 
         model.scheduler_kwargs = scheduler_kwargs
+
+        if load_logs: 
+            logs_path = path / "logs"
+            training_logs = [] 
+            tuning_logs = []
+            if logs_path.exists() and logs_path.is_dir(): 
+                estimator_log_files = sorted(logs_path.glob("estimator_*.log"))
+                for log_file in estimator_log_files:
+                    with open(log_file, "r", encoding="utf-8") as f:
+                        training_logs.append(f.read())
+
+                tuning_log_files = sorted(logs_path.glob("tuning_*.log"))
+                for log_file in tuning_log_files: 
+                    with open(log_file, "r", encoding="utf-8") as f: 
+                        tuning_logs.append(f.read())
+
+            model.training_logs = training_logs
+            model.tuning_logs = tuning_logs
 
         return model
