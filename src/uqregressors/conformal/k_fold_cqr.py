@@ -5,12 +5,12 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.base import BaseEstimator, RegressorMixin 
 from uqregressors.utils.activations import get_activation 
 from uqregressors.utils.logging import Logger
+from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
+from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler, TorchKFold
 from joblib import Parallel, delayed 
-from sklearn.model_selection import KFold
 from pathlib import Path 
 import json 
 import pickle
-from sklearn.preprocessing import StandardScaler
 
 class QuantNN(nn.Module): 
     def __init__(self, input_dim, hidden_sizes, dropout, activation): 
@@ -38,6 +38,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             hidden_sizes=[64, 64], 
             dropout = None,
             alpha=0.1, 
+            requires_grad=False,
             tau_lo = None, 
             tau_hi = None, 
             n_jobs=1, 
@@ -65,6 +66,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         self.hidden_sizes = hidden_sizes
         self.dropout = dropout
         self.alpha = alpha
+        self.requires_grad = requires_grad
         self.tau_lo = tau_lo or alpha / 2 
         self.tau_hi = tau_hi or 1 - alpha / 2
         self.activation_str = activation_str
@@ -92,8 +94,8 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         if self.n_estimators == 1: 
             raise ValueError("n_estimators set to 1. To use a single Quantile Regressor, use a non-ensembled Quantile Regressor class")
         self.scale_data = scale_data 
-        self.input_scaler = input_scaler or StandardScaler() 
-        self.output_scaler = output_scaler or StandardScaler()
+        self.input_scaler = input_scaler or TorchStandardScaler() 
+        self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
         self.training_logs = None
@@ -120,7 +122,9 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         if self.scheduler_cls: 
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
-        dataset = TensorDataset(X_tensor[train_idx], y_tensor[train_idx])
+        X_train = X_tensor.detach()[train_idx]
+        y_train = y_tensor.detach()[train_idx]
+        dataset = TensorDataset(X_train, y_train)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
         logger = Logger(
@@ -153,27 +157,26 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         test_X = X_tensor[cal_idx]
         test_y = y_tensor[cal_idx]
         oof_preds = model(test_X)
-        loss_matrix =(oof_preds - test_y) * torch.tensor([1, -1], device=self.device)
+        loss_matrix =(oof_preds - test_y) * torch.tensor([1.0, -1.0], device=self.device)
         residuals = torch.max(loss_matrix, dim=1).values
         logger.finish()
         return model, residuals, logger
     
     def fit(self, X, y): 
-        if self.scale_data:
-            X = self.input_scaler.fit_transform(X)
-            y = self.output_scaler.fit_transform(y.reshape(-1, 1))
-
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y, dtype=torch.float32).to(self.device)
-
-        input_dim = X.shape[1]
+        X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
+        input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
 
-        kf = KFold(n_splits=self.n_estimators, shuffle=True)
+
+        if self.scale_data:
+            X_tensor = self.input_scaler.fit_transform(X_tensor)
+            y_tensor = self.output_scaler.fit_transform(y_tensor)
+
+        kf = TorchKFold(n_splits=self.n_estimators, shuffle=True)
 
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, train_idx, cal_idx, i)
-            for i, (train_idx, cal_idx) in enumerate(kf.split(X_tensor.detach().cpu().numpy()))
+            for i, (train_idx, cal_idx) in enumerate(kf.split(X_tensor))
         )
 
         self.models = [result[0] for result in results]
@@ -183,43 +186,47 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         return self
     
     def predict(self, X): 
-
+        X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         n = len(self.residuals)
         q = int((1 - self.alpha) * (n + 1))
         q = min(q, n-1)
 
         res_quantile = n-q
     
-        self.conformal_width = torch.topk(self.residuals, res_quantile).values[-1].detach().cpu().numpy()
+        self.conformal_width = torch.topk(self.residuals, res_quantile).values[-1]
 
         if self.scale_data: 
-            X = self.input_scaler.transform(X)
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
+            X_tensor = self.input_scaler.transform(X_tensor)
+
         preds = [] 
 
         with torch.no_grad(): 
             for model in self.models: 
                 model.eval()
-                pred = model(X_tensor).cpu().numpy()
+                pred = model(X_tensor)
                 preds.append(pred)
 
-        preds = np.array(preds)
+        preds = torch.stack(preds)
 
-        means = np.mean(preds, axis=2) 
-        mean = np.mean(means, axis=0)
+        means = torch.mean(preds, dim=2) 
+        mean = torch.mean(means, dim=0)
  
-        lower_cq = np.mean(preds[:, :, 0], axis=0)
-        upper_cq = np.mean(preds[:, :, 1], axis=0)
+        lower_cq = torch.mean(preds[:, :, 0], dim=0)
+        upper_cq = torch.mean(preds[:, :, 1], dim=0)
 
         lower = lower_cq - self.conformal_width
         upper = upper_cq + self.conformal_width
 
         if self.scale_data: 
-            mean = self.output_scaler.inverse_transform(mean.reshape(-1, 1)).squeeze()
-            lower = self.output_scaler.inverse_transform(lower.reshape(-1, 1)).squeeze()
-            upper = self.output_scaler.inverse_transform(upper.reshape(-1, 1)).squeeze()
+            mean = self.output_scaler.inverse_transform(mean.view(-1, 1)).squeeze()
+            lower = self.output_scaler.inverse_transform(lower.view(-1, 1)).squeeze()
+            upper = self.output_scaler.inverse_transform(upper.view(-1, 1)).squeeze()
 
-        return mean, lower, upper
+        if not self.requires_grad: 
+            return mean.detach().cpu().numpy(), lower.detach().cpu().numpy(), upper.detach().cpu().numpy()
+
+        else: 
+            return mean, lower, upper
     
     def save(self, path):
         path = Path(path)

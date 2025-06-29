@@ -115,8 +115,9 @@ cqr = ConformalQuantileRegressor(
 k_fold_cqr = KFoldCQR(
     hidden_sizes = [64, 64], 
     n_estimators=5, 
-    n_jobs=3,
+    n_jobs=1,
     alpha = 0.1, 
+    requires_grad=True,
     dropout=0.1, 
     epochs=1000, 
     batch_size=64, 
@@ -145,6 +146,7 @@ conformal_ens = ConformalEnsRegressor(
 )
 
 if __name__ == "__main__": 
+    torch.autograd.set_detect_anomaly(True)
     torch.multiprocessing.set_start_method('spawn', force=True)
     BASE_SAVE_DIR = Path.home() / ".uqregressors" / "validation"
     BASE_SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -152,15 +154,17 @@ if __name__ == "__main__":
     seed = 42
 
     models = {
-        #"deep_ens": (deep_ens, 0.05),
+        "deep_ens": (deep_ens, 0.05),
         "dropout": (dropout, 0.1),
-        #"cqr": (cqr, 0.2),
-        #"conformal_ens": (conformal_ens, 0.2),
-        #"k_fold_cqr": (k_fold_cqr, 0.2),
+        "cqr": (cqr, 0.2),
+        "conformal_ens": (conformal_ens, 0.2),
+        "k_fold_cqr": (k_fold_cqr, 0.2),
     }
 
     for name, (model, test_size) in models.items(): 
        run_regressor_test(BASE_SAVE_DIR, model, seed, name, test_size=test_size)
+       
     print_results(BASE_SAVE_DIR / "cqr.pkl")
     print_results(BASE_SAVE_DIR / "k_fold_cqr.pkl")
     print_results(BASE_SAVE_DIR / "conformal_ens.pkl")
+    print_results(BASE_SAVE_DIR / "deep_ens.pkl")

@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn 
 from torch.utils.data import TensorDataset, DataLoader 
 from sklearn.base import BaseEstimator, RegressorMixin 
-from sklearn.preprocessing import StandardScaler
-from uqregressors.utils.activations import get_activation 
+from uqregressors.utils.activations import get_activation
+from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
+from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler, train_test_split
 from uqregressors.utils.logging import Logger 
 from joblib import Parallel, delayed 
-from sklearn.model_selection import train_test_split 
 from pathlib import Path 
 import json 
 import pickle 
@@ -36,6 +36,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             cal_size = 0.2, 
             dropout = None, 
             alpha = 0.1, 
+            requires_grad = False, 
             tau_lo = None, 
             tau_hi = None,
             activation_str="ReLU",
@@ -62,6 +63,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.cal_size = cal_size 
         self.dropout = dropout 
         self.alpha = alpha 
+        self.requires_grad = requires_grad
         self.tau_lo = tau_lo or alpha / 2 
         self.tau_hi = tau_hi or 1 - alpha / 2
         self.activation_str = activation_str 
@@ -88,8 +90,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.input_dim = None
 
         self.scale_data = scale_data 
-        self.input_scaler = input_scaler or StandardScaler() 
-        self.output_scaler = output_scaler or StandardScaler()
+        self.input_scaler = input_scaler or TorchStandardScaler() 
+        self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
         self.training_logs = None
@@ -101,6 +103,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         return torch.mean(torch.max(self.quantiles * error, (self.quantiles - 1) * error))
 
     def fit(self, X, y): 
+        X, y = validate_and_prepare_inputs(X, y, device=self.device)
+
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
             np.random.seed(self.random_seed)
@@ -109,10 +113,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             X = self.input_scaler.fit_transform(X)
             y = self.output_scaler.fit_transform(y.reshape(-1, 1))
 
-        X_train, X_cal, y_train, y_cal = train_test_split(X, y, test_size=self.cal_size, random_state=self.random_seed)
-        
-        X_tensor = torch.tensor(X_train, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y_train, dtype=torch.float32).to(self.device)
+        X_train, X_cal, y_train, y_cal = train_test_split(X, y, test_size=self.cal_size, random_state=self.random_seed, device=self.device, shuffle=True)
 
         input_dim = X.shape[1]
         self.input_dim = input_dim 
@@ -143,7 +144,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         if self.scheduler_cls is not None:
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
-        dataset = TensorDataset(X_tensor, y_tensor)
+        dataset = TensorDataset(X_train, y_train)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
         self.model.train()
@@ -163,9 +164,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             if epoch % (self.epochs / 20) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
-        X_cal = torch.tensor(X_cal, dtype=torch.float32).to(self.device)
-        y_cal = torch.tensor(y_cal, dtype=torch.float32).to(self.device)
-
         oof_preds = self.model(X_cal)
         loss_matrix = (oof_preds - y_cal) * torch.tensor([1, -1], device=self.device)
         self.residuals = torch.max(loss_matrix, dim=1).values
@@ -175,6 +173,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         return self
 
     def predict(self, X): 
+        X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         self.model.eval()
 
         n = len(self.residuals)
@@ -182,19 +181,18 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         q = min(q, n-1)
         res_quantile = n-q
 
-        self.conformal_width = torch.topk(self.residuals, res_quantile).values[-1].detach().cpu().numpy()
+        self.conformal_width = torch.topk(self.residuals, res_quantile).values[-1]
 
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
             np.random.seed(self.random_seed)
         
         if self.scale_data: 
-            X = self.input_scaler.transform(X)
+            X_tensor = self.input_scaler.transform(X_tensor)
 
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
         preds = self.model(X_tensor)
-        lower_cq = preds[:, 0].unsqueeze(dim=1).detach().cpu().numpy()
-        upper_cq = preds[:, 1].unsqueeze(dim=1).detach().cpu().numpy()
+        lower_cq = preds[:, 0].unsqueeze(dim=1)
+        upper_cq = preds[:, 1].unsqueeze(dim=1)
         lower = lower_cq - self.conformal_width 
         upper = upper_cq + self.conformal_width 
         mean = (lower + upper) / 2 
@@ -207,8 +205,12 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             mean = mean.squeeze() 
             lower = lower.squeeze() 
             upper = upper.squeeze()
+ 
+        if not self.requires_grad: 
+            return mean.detach().cpu().numpy(), lower.detach().cpu().numpy(), upper.detach().cpu().numpy()
 
-        return mean, lower, upper 
+        else: 
+            return mean, lower, upper
     
     def save(self, path): 
         path = Path(path)

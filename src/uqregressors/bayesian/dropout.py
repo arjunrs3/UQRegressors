@@ -3,17 +3,14 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.preprocessing import StandardScaler
 from uqregressors.utils.activations import get_activation
+from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
+from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler
 from uqregressors.utils.logging import Logger
-from sklearn.model_selection import train_test_split
 from pathlib import Path 
 import json 
 import pickle
 import scipy.stats as st
-from scipy.special import logsumexp
-from skopt import gp_minimize
-from skopt.space import Real
 
 
 class MLP(nn.Module):
@@ -41,6 +38,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         tau=1.0,
         use_paper_weight_decay=True,
         alpha=0.1,
+        requires_grad=False, 
         activation_str="ReLU",
         n_samples=100,
         learning_rate=1e-3,
@@ -67,6 +65,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.tau = tau
         self.use_paper_weight_decay = use_paper_weight_decay
         self.alpha = alpha
+        self.requires_grad = requires_grad
         self.activation_str = activation_str
         self.n_samples = n_samples
         self.learning_rate = learning_rate
@@ -88,8 +87,8 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.input_dim = None
 
         self.scale_data = scale_data
-        self.input_scaler = input_scaler or StandardScaler()
-        self.output_scaler = output_scaler or StandardScaler()
+        self.input_scaler = input_scaler or TorchStandardScaler()
+        self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = [] 
         self.training_logs = None
@@ -97,16 +96,14 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.tuning_logs = None
 
     def fit(self, X, y): 
-        if self.scale_data: 
-            X = self.input_scaler.fit_transform(X)
-            y = self.output_scaler.fit_transform(y.reshape(-1, 1))
-        
-        X_train, y_train = X, y
-        X_tensor = torch.tensor(X_train, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y_train, dtype=torch.float32).to(self.device)
-        input_dim = X.shape[1]
+        X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
+        input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
-        
+
+        if self.scale_data: 
+            X_tensor = self.input_scaler.fit_transform(X_tensor)
+            y_tensor = self.output_scaler.fit_transform(y_tensor)
+
         model, logger = self._fit_single_model(X_tensor, y_tensor)
         self._loggers.append(logger)
 
@@ -166,25 +163,26 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         return self, logger
 
     def predict(self, X):
+        X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
             np.random.seed(self.random_seed)
         
         if self.scale_data: 
-            X = self.input_scaler.transform(X)
-        X = torch.tensor(X, dtype=torch.float32).to(self.device)
+            X_tensor = self.input_scaler.transform(X_tensor)
+
         self.model.train()
         preds = []
         with torch.no_grad():
             for _ in range(self.n_samples):
-                preds.append(self.model(X).cpu().numpy())
-        preds = np.stack(preds, axis=0)
-        mean = preds.mean(axis=0)
-        variance = np.var(preds, axis=0) + 1 / self.tau 
-        std = np.sqrt(variance)
-        z_score = st.norm.ppf(1 - self.alpha / 2)
-        lower = mean - std * z_score 
-        upper = mean + std * z_score
+                preds.append(self.model(X_tensor))
+        preds = torch.stack(preds)
+        mean = preds.mean(dim=0)
+        variance = torch.var(preds, dim=0) + 1 / self.tau 
+        std = variance.sqrt()
+        std_mult = torch.tensor(st.norm.ppf(1 - self.alpha / 2), device=mean.device)
+        lower = mean - std * std_mult
+        upper = mean + std * std_mult
 
         if self.scale_data: 
             mean = self.output_scaler.inverse_transform(mean).squeeze()
@@ -196,7 +194,11 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
             lower = lower.squeeze() 
             upper = upper.squeeze() 
 
-        return mean, lower, upper
+        if not self.requires_grad: 
+            return mean.detach().cpu().numpy(), lower.detach().cpu().numpy(), upper.detach().cpu().numpy()
+
+        else: 
+            return mean, lower, upper
 
     def save(self, path):
         path = Path(path)

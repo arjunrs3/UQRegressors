@@ -10,9 +10,10 @@ from torch.utils.data import TensorDataset, DataLoader
 from pathlib import Path
 import json
 import pickle
-from sklearn.preprocessing import StandardScaler
 import torch.multiprocessing as mp 
 import torch.nn.functional as F
+from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler
+from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
 
 mp.set_start_method('spawn', force=True)
 
@@ -44,6 +45,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         n_estimators=5,
         hidden_sizes=[64, 64],
         alpha=0.1,
+        requires_grad=False,
         activation_str="ReLU",
         learning_rate=1e-3,
         epochs=200,
@@ -61,7 +63,6 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         random_seed=None,
         scale_data=True, 
         input_scaler=None,
-        scale_output_data=True,
         output_scaler=None, 
         tuning_loggers = [],
     ):
@@ -69,6 +70,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
         self.alpha = alpha
+        self.requires_grad = requires_grad
         self.activation_str = activation_str
         self.learning_rate = learning_rate
         self.epochs = epochs
@@ -90,12 +92,10 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         self.input_dim = None
 
         self.scale_data = scale_data
-        self.scale_output_data = scale_output_data
 
         if scale_data: 
-            self.input_scaler = input_scaler or StandardScaler()
-        if scale_output_data:
-            self.output_scaler = output_scaler or StandardScaler()
+            self.input_scaler = input_scaler or TorchStandardScaler()
+            self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
         self.training_logs = None
@@ -112,11 +112,6 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
 
     def _train_single_model(self, X_tensor, y_tensor, input_dim, idx): 
         X_tensor = X_tensor.to(self.device)
-        gpu = X_tensor.device
-        if gpu.type == "cuda" and gpu.index is not None:
-            models_on_this_gpu = max(1, self.n_estimators // torch.cuda.device_count())
-            memory_fraction = 0.9 / models_on_this_gpu
-            torch.cuda.set_per_process_memory_fraction(memory_fraction, device=gpu.index)
         y_tensor = y_tensor.to(self.device)
 
         if self.random_seed is not None: 
@@ -165,17 +160,13 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         return model, logger
     
     def fit(self, X, y): 
-
-        if self.scale_data: 
-            X = self.input_scaler.fit_transform(X)
-        if self.scale_output_data:
-            y = self.output_scaler.fit_transform(y.reshape(-1, 1))
-
-        X_tensor = torch.tensor(X, dtype=torch.float32)
-        y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1)
-
-        input_dim = X.shape[1]
+        X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
+        input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
+        
+        if self.scale_data: 
+            X_tensor = self.input_scaler.fit_transform(X_tensor)
+            y_tensor = self.output_scaler.fit_transform(y_tensor)
 
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, i)
@@ -187,36 +178,41 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         return self
     
     def predict(self, X): 
+        X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.scale_data: 
-            X = self.input_scaler.transform(X)
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
+            X_tensor = self.input_scaler.transform(X_tensor)
+
         preds = [] 
 
-        with torch.no_grad(): 
-            for model in self.models: 
-                model.eval()
-                pred = model(X_tensor).cpu().numpy()
-                preds.append(pred)
+        for model in self.models: 
+            model.eval()
+            pred = model(X_tensor)
+            preds.append(pred)
 
-        preds = np.array(preds)
+        preds = torch.stack(preds)
 
         means = preds[:, :, 0]
         variances = preds[:, :, 1]
 
-        mean = means.mean(axis=0)
-        variance = np.mean(variances + means ** 2, axis=0) - mean ** 2
+        mean = means.mean(dim=0)
+        variance = torch.mean(variances + means ** 2, dim=0) - mean ** 2
+        std = variance.sqrt()
 
-        std_mult = st.norm.ppf(1 - self.alpha / 2)
+        std_mult = torch.tensor(st.norm.ppf(1 - self.alpha / 2), device=mean.device)
 
-        lower = mean - variance ** 0.5 * std_mult 
-        upper = mean + variance ** 0.5 * std_mult 
+        lower = mean - std * std_mult 
+        upper = mean + std * std_mult 
 
-        if self.scale_output_data: 
-            mean = self.output_scaler.inverse_transform(mean.reshape(-1, 1)).squeeze()
-            lower = self.output_scaler.inverse_transform(lower.reshape(-1, 1)).squeeze()
-            upper = self.output_scaler.inverse_transform(upper.reshape(-1, 1)).squeeze() 
+        if self.scale_data: 
+            mean = self.output_scaler.inverse_transform(mean.view(-1, 1)).squeeze()
+            lower = self.output_scaler.inverse_transform(lower.view(-1, 1)).squeeze()
+            upper = self.output_scaler.inverse_transform(upper.view(-1, 1)).squeeze() 
 
-        return mean, lower, upper
+        if not self.requires_grad: 
+            return mean.detach().cpu().numpy(), lower.detach().cpu().numpy(), upper.detach().cpu().numpy()
+
+        else: 
+            return mean, lower, upper
 
     def save(self, path):
         path = Path(path)

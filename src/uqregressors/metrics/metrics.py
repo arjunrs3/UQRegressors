@@ -1,23 +1,28 @@
 import numpy as np
 from scipy.stats import norm
+import torch
 
 def validate_inputs(mean, lower, upper, y_true, alpha=0.5):
-    """Ensure inputs are 1D numpy arrays and alpha is a float in (0, 1)."""
-    def to_1d_np(x):
+    """Ensure inputs are converted to 1D numpy arrays and alpha is a float in (0, 1)."""
+
+    def to_1d_numpy(x):
+        if isinstance(x, torch.Tensor):
+            x = x.detach().cpu().numpy()
         x = np.asarray(x)
         if x.ndim != 1:
             x = x.flatten()
         return x
 
-    mean = to_1d_np(mean)
-    lower = to_1d_np(lower)
-    upper = to_1d_np(upper)
-    y_true = to_1d_np(y_true)
+    mean = to_1d_numpy(mean)
+    lower = to_1d_numpy(lower)
+    upper = to_1d_numpy(upper)
+    y_true = to_1d_numpy(y_true)
 
     if not (0 < float(alpha) < 1):
         raise ValueError(f"alpha must be in (0, 1), got {alpha}")
 
-    if not (len(mean) == len(lower) == len(upper) == len(y_true)):
+    length = len(mean)
+    if not (len(lower) == len(upper) == len(y_true) == length):
         raise ValueError("All input arrays must be of the same length.")
 
     return mean, lower, upper, y_true, float(alpha)

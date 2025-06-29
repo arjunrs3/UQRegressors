@@ -5,6 +5,7 @@ import scipy.stats as st
 from pathlib import Path
 import json
 import pickle
+from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
 
 class ExactGP(gpytorch.models.ExactGP): 
     def __init__(self, kernel, train_x, train_y, likelihood):
@@ -23,6 +24,7 @@ class GPRegressorTorch:
                  kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel()), 
                  likelihood=gpytorch.likelihoods.GaussianLikelihood(), 
                  alpha=0.1,
+                 requires_grad=False,
                  learning_rate=1e-3,
                  epochs=200, 
                  optimizer_cls=torch.optim.Adam,
@@ -41,6 +43,7 @@ class GPRegressorTorch:
         self.kernel = kernel 
         self.likelihood = likelihood
         self.alpha = alpha 
+        self.requires_grad = requires_grad
         self.learning_rate = learning_rate
         self.epochs = epochs
         self.optimizer_cls = optimizer_cls 
@@ -54,8 +57,6 @@ class GPRegressorTorch:
         self.wandb_run_name = wandb_run_name
         self.model = None
         self.random_seed = random_seed
-        self.train_X = None 
-        self.train_y = None
 
         self._loggers = []
         self.training_logs = None 
@@ -63,6 +64,9 @@ class GPRegressorTorch:
         self.tuning_logs = None
 
     def fit(self, X, y): 
+        X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
+        y_tensor = y_tensor.view(-1)
+
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
 
@@ -77,12 +81,6 @@ class GPRegressorTorch:
             run_name=self.wandb_run_name,
             config=config,
         )
-
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y.ravel(), dtype=torch.float32).to(self.device)
-
-        self.train_X = X_tensor
-        self.train_y = y_tensor
 
         model = ExactGP(self.kernel, X_tensor, y_tensor, self.likelihood)
         self.model = model.to(self.device)
@@ -117,22 +115,27 @@ class GPRegressorTorch:
         self._loggers.append(logger)
 
     def predict(self, X):
-        X = torch.tensor(X, dtype=torch.float32).to(self.device)
+        X_tensor = validate_X_input(X, device=self.device, requires_grad=True)
         self.model.eval()
         self.likelihood.eval() 
 
         with torch.no_grad(), gpytorch.settings.fast_pred_var(): 
-            preds = self.likelihood(self.model(X))
+            preds = self.likelihood(self.model(X_tensor))
 
         with torch.no_grad(): 
-            mean = preds.mean.numpy() 
+            mean = preds.mean
             lower_2std, upper_2std = preds.confidence_region() 
-            low_std, up_std = (mean - lower_2std.numpy()) / 2, (upper_2std.numpy() - mean) / 2 
+            low_std, up_std = (mean - lower_2std) / 2, (upper_2std - mean) / 2 
 
         z_score = st.norm.ppf(1 - self.alpha / 2)
         lower = mean - z_score * low_std
         upper = mean + z_score * up_std
-        return mean, lower, upper
+
+        if not self.requires_grad: 
+            return mean.detach().cpu().numpy(), lower.detach().cpu().numpy(), upper.detach().cpu().numpy()
+
+        else: 
+            return mean, lower, upper
     
     def mll_loss(self, preds, y): 
         return -torch.sum(self.mll(preds, y))

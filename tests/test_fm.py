@@ -3,7 +3,6 @@ import torch
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 
-# Replace with actual import paths
 from uqregressors.conformal.conformal_ens import ConformalEnsRegressor
 from uqregressors.conformal.k_fold_cqr import KFoldCQR
 from uqregressors.conformal.cqr import ConformalQuantileRegressor
@@ -69,9 +68,9 @@ def test_model_save_load(regressor_class, regressor_name):
 
 # List of regressors to test
 regressors_to_test = [
+    (DeepEnsembleRegressor, "DeepEnsembleRegressor"), 
     (ConformalEnsRegressor, "ConformalEnsRegressor"),
     (ConformalQuantileRegressor, "ConformalQuantileRegressor"),
-    (DeepEnsembleRegressor, "DeepEnsembleRegressor"), 
     (MCDropoutRegressor, "MCDropoutRegressor"), 
     (GPRegressor, "GaussianProcessRegressor"), 
     (GPRegressorTorch, "GPRegressorTorch"), 

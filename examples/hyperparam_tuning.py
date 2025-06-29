@@ -4,7 +4,7 @@ import torch
 from uqregressors.utils.validate_dataset import clean_dataset, validate_dataset
 import matplotlib.pyplot as plt
 from uqregressors.metrics.metrics import compute_all_metrics
-from uqregressors.conformal.conformal_split import ConformalQuantileRegressor 
+from uqregressors.conformal.cqr import ConformalQuantileRegressor 
 
 if __name__ == "__main__": 
     seed = 42 

@@ -5,7 +5,8 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.base import BaseEstimator, RegressorMixin 
 from uqregressors.utils.activations import get_activation 
 from uqregressors.utils.logging import Logger 
-from sklearn.preprocessing import StandardScaler
+from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
+from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler
 from joblib import Parallel, delayed
 from pathlib import Path
 import json 
@@ -47,6 +48,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                  n_estimators=5, 
                  hidden_sizes=[64, 64], 
                  alpha=0.1, 
+                 requires_grad=False,
                  dropout=None,
                  pred_with_dropout=False,
                  activation_str="ReLU",
@@ -75,6 +77,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.n_estimators = n_estimators
         self.hidden_sizes = hidden_sizes
         self.alpha = alpha
+        self.requires_grad = requires_grad
         self.dropout = dropout
         self.pred_with_dropout = pred_with_dropout
         self.activation_str = activation_str
@@ -98,8 +101,8 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.random_seed = random_seed
 
         self.scale_data = scale_data 
-        self.input_scaler = input_scaler or StandardScaler() 
-        self.output_scaler = output_scaler or StandardScaler()
+        self.input_scaler = input_scaler or TorchStandardScaler() 
+        self.output_scaler = output_scaler or TorchStandardScaler()
 
         self.input_dim = None
         self.conformity_scores = None
@@ -167,14 +170,13 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         return model, cal_preds, logger
     
     def fit(self, X, y): 
-        if self.scale_data: 
-            X = self.input_scaler.fit_transform(X)
-            y = self.output_scaler.fit_transform(y.reshape(-1, 1))
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
-        y_tensor = torch.tensor(y, dtype=torch.float32).view(-1, 1).to(self.device)
-
-        input_dim = X.shape[1]
+        X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
+        input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
+
+        if self.scale_data: 
+            X_tensor = self.input_scaler.fit_transform(X_tensor)
+            y_tensor = self.output_scaler.fit_transform(y_tensor)
 
         train_idx, cal_idx = train_test_split(X_tensor, 0.2, self.random_seed)
         results = Parallel(n_jobs=self.n_jobs)(
@@ -188,7 +190,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
 
         mean_cal_preds = torch.mean(cal_preds, dim=0).squeeze()
         var_cal_preds = torch.var(cal_preds, dim=0).squeeze()
-        std_cal_preds = var_cal_preds ** 0.5 
+        std_cal_preds = var_cal_preds.sqrt()
         self.residuals = torch.abs(mean_cal_preds - y_tensor[cal_idx].squeeze())
     
         self.conformity_scores = self.residuals / (std_cal_preds + self.gamma)
@@ -196,18 +198,16 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         return self 
     
     def predict(self, X): 
-        
+        X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
+        if self.scale_data: 
+            X_tensor = self.input_scaler.transform(X_tensor)
         n = len(self.residuals)
         q = int((1 - self.alpha) * (n+1)) 
         q = min(q, n-1) 
 
         res_quantile = n-q
+        self.conformity_score = torch.topk(self.conformity_scores, res_quantile).values[-1]
 
-        self.conformity_score = torch.topk(self.conformity_scores, res_quantile).values[-1].detach().cpu().numpy()
-        
-        if self.scale_data: 
-            X = self.input_scaler.transform(X)
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
         preds = []
 
         with torch.no_grad(): 
@@ -216,22 +216,27 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                     model.train()
                 else: 
                     model.eval()
-                pred = model(X_tensor).cpu().numpy() 
+                pred = model(X_tensor)
                 preds.append(pred)
 
-        preds = np.array(preds)[:, :, 0]
-        mean = np.mean(preds, axis=0)
-        variances = np.var(preds, axis=0, ddof=1)
-        stds = variances ** 0.5
+        preds = torch.stack(preds)[:, :, 0]
+        mean = torch.mean(preds, dim=0)
+        variances = torch.var(preds, dim=0)
+        stds = variances.sqrt()
         conformal_widths = self.conformity_score * (stds + self.gamma) 
         lower = mean - conformal_widths 
         upper = mean + conformal_widths 
 
         if self.scale_data: 
-            mean = self.output_scaler.inverse_transform(mean.reshape(-1, 1)).squeeze()
-            lower = self.output_scaler.inverse_transform(lower.reshape(-1, 1)).squeeze()
-            upper = self.output_scaler.inverse_transform(upper.reshape(-1, 1)).squeeze()
-        return mean, lower, upper 
+            mean = self.output_scaler.inverse_transform(mean.view(-1, 1)).squeeze()
+            lower = self.output_scaler.inverse_transform(lower.view(-1, 1)).squeeze()
+            upper = self.output_scaler.inverse_transform(upper.view(-1, 1)).squeeze()
+
+        if not self.requires_grad: 
+            return mean.detach().cpu().numpy(), lower.detach().cpu().numpy(), upper.detach().cpu().numpy()
+
+        else: 
+            return mean, lower, upper
     
     def save(self, path):
         path = Path(path)
