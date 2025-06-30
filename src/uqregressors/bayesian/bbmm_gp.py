@@ -8,6 +8,15 @@ import pickle
 from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
 
 class ExactGP(gpytorch.models.ExactGP): 
+    """
+    A custom GPyTorch Exact Gaussian Process model using a constant mean and a user-specified kernel.
+
+    Args:
+        kernel (gpytorch.kernels.Kernel): Kernel defining the covariance structure of the GP.
+        train_x (torch.Tensor): Training inputs of shape (n_samples, n_features).
+        train_y (torch.Tensor): Training targets of shape (n_samples,).
+        likelihood (gpytorch.likelihoods.Likelihood): Likelihood function (e.g., GaussianLikelihood).
+    """
     def __init__(self, kernel, train_x, train_y, likelihood):
         super(ExactGP, self).__init__(train_x, train_y, likelihood)
         self.mean_module = gpytorch.means.ConstantMean()
@@ -18,7 +27,36 @@ class ExactGP(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-class GPRegressorTorch: 
+class BBMM_GP: 
+    """
+    A wrapper around GPyTorch's ExactGP for regression with uncertainty quantification.
+
+    Supports custom kernels, optimizers, learning schedules, and logging.
+    Outputs mean predictions and confidence intervals using predictive variance.
+
+    Args:
+        name (str): Name of the model instance.
+        kernel (gpytorch.kernels.Kernel): Covariance kernel.
+        likelihood (gpytorch.likelihoods.Likelihood): Likelihood function used in GP.
+        alpha (float): Significance level for predictive intervals (e.g. 0.1 = 90% CI).
+        requires_grad (bool): If True, returns tensors requiring gradients during prediction.
+        learning_rate (float): Optimizer learning rate.
+        epochs (int): Number of training epochs.
+        optimizer_cls (Callable): Optimizer class (e.g., torch.optim.Adam).
+        optimizer_kwargs (dict): Extra keyword arguments for the optimizer.
+        scheduler_cls (Callable or None): Learning rate scheduler class.
+        scheduler_kwargs (dict): Extra keyword arguments for the scheduler.
+        loss_fn (Callable or None): Custom loss function. Defaults to negative log marginal likelihood.
+        device (str): Device to train the model on ("cpu" or "cuda").
+        use_wandb (bool): If True, enables wandb logging.
+        wandb_project (str or None): Name of the wandb project.
+        wandb_run_name (str or None): Name of the wandb run.
+        random_seed (int or None): Random seed for reproducibility.
+        tuning_loggers (List[Logger]): Optional list of loggers from hyperparameter tuning.
+
+    Attributes: 
+        _loggers [list]: Logger of training loss
+    """
     def __init__(self, 
                  name="BBMM_GP_Regressor",
                  kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel()), 
@@ -64,6 +102,13 @@ class GPRegressorTorch:
         self.tuning_logs = None
 
     def fit(self, X, y): 
+        """
+        Fits the GP model to training data.
+
+        Args:
+            X (np.ndarray or torch.Tensor): Training features of shape (n_samples, n_features).
+            y (np.ndarray or torch.Tensor): Training targets of shape (n_samples,).
+        """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
         y_tensor = y_tensor.view(-1)
 
@@ -115,6 +160,22 @@ class GPRegressorTorch:
         self._loggers.append(logger)
 
     def predict(self, X):
+        """
+        Predicts the target values with uncertainty estimates.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            (Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]): Tuple containing:
+                mean predictions,
+                lower bound of the prediction interval,
+                upper bound of the prediction interval.
+        
+        !!! note
+            If `requires_grad` is False, all returned arrays are NumPy arrays.
+            Otherwise, they are PyTorch tensors with gradients.
+        """
         X_tensor = validate_X_input(X, device=self.device, requires_grad=True)
         self.model.eval()
         self.likelihood.eval() 
@@ -138,10 +199,26 @@ class GPRegressorTorch:
             return mean, lower, upper
     
     def mll_loss(self, preds, y): 
+        """
+        Computes the negative log marginal likelihood (default loss function).
+
+        Args:
+            preds (gpytorch.distributions.MultivariateNormal): GP predictive distribution.
+            y (torch.Tensor): Ground truth targets.
+
+        Returns:
+            (torch.Tensor): Negative log marginal likelihood loss.
+        """
         return -torch.sum(self.mll(preds, y))
     
 
     def save(self, path):
+        """
+        Saves model configuration, weights, and training data to disk.
+
+        Args:
+            path (Union[str, Path]): Path to save directory.
+        """
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -175,6 +252,17 @@ class GPRegressorTorch:
 
     @classmethod
     def load(cls, path, device="cpu", load_logs=False):
+        """
+        Loads a saved BBMM_GP model from disk.
+
+        Args:
+            path (Union[str, Path]): Path to saved model directory.
+            device (str): Device to map model to ("cpu" or "cuda").
+            load_logs (bool): If True, also loads training/tuning logs.
+
+        Returns:
+            (BBMM_GP): Loaded model instance.
+        """
         path = Path(path)
 
         # Load config

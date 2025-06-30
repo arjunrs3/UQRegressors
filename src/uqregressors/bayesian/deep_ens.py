@@ -1,3 +1,17 @@
+"""
+Deep Ensembles
+--------------
+
+This module implements Deep Ensemble Regressors for regression of a one dimensional output. 
+
+Key features are: 
+    - Customizable neural network architecture 
+    - Prediction Intervals based on Gaussian assumption 
+    - Parallel training of ensemble members with Joblib
+    - Customizable optimizer and loss function
+    - Optional Input/Output Normalization
+"""
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -18,6 +32,14 @@ from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate
 mp.set_start_method('spawn', force=True)
 
 class MLP(nn.Module): 
+    """
+    A simple multi-layer perceptron which outputs a mean and a positive variance per input sample.
+    
+    Args:
+        input_dim (int): Number of input features.
+        hidden_sizes (list of int): List of hidden layer sizes.
+        activation (torch.nn.Module): Activation function class (e.g., nn.ReLU).
+    """
     def __init__(self, input_dim, hidden_sizes, activation):
         super().__init__()
         layers = []
@@ -39,6 +61,45 @@ class MLP(nn.Module):
         return scaled_outputs
     
 class DeepEnsembleRegressor(BaseEstimator, RegressorMixin): 
+    """
+    Deep Ensemble Regressor with uncertainty estimation using neural networks.
+
+    Trains an ensemble of MLP models to predict both mean and variance for regression tasks,
+    and provides predictive uncertainty intervals.
+
+    Args:
+        name (str): Name of the regressor for config files.
+        n_estimators (int): Number of ensemble members.
+        hidden_sizes (list of int): List of hidden layer sizes for each MLP.
+        alpha (float): Significance level for prediction intervals (e.g., 0.1 for 90% interval).
+        requires_grad (bool): If True, returned predictions require gradients.
+        activation_str (str): Name of activation function to use (e.g., 'ReLU').
+        learning_rate (float): Learning rate for optimizer.
+        epochs (int): Number of training epochs.
+        batch_size (int): Batch size for training.
+        optimizer_cls (torch.optim.Optimizer): Optimizer class.
+        optimizer_kwargs (dict): Additional kwargs for optimizer.
+        scheduler_cls (torch.optim.lr_scheduler._LRScheduler or None): Learning rate scheduler class.
+        scheduler_kwargs (dict): Additional kwargs for scheduler.
+        loss_fn (callable): Loss function accepting (preds, targets).
+        device (str or torch.device): Device to run training on ('cpu' or 'cuda').
+        use_wandb (bool): Whether to use Weights & Biases logging.
+        wandb_project (str or None): WandB project name.
+        wandb_run_name (str or None): WandB run name prefix.
+        n_jobs (int): Number of parallel jobs to train ensemble members.
+        random_seed (int or None): Seed for reproducibility.
+        scale_data (bool): Whether to scale input and output data.
+        input_scaler (object or None): Scaler for input features.
+        output_scaler (object or None): Scaler for target values.
+        tuning_loggers (list): List of tuning loggers.
+
+    Attributes:
+        models (list): List of trained PyTorch MLP models.
+        input_dim (int): Dimensionality of input features.
+        _loggers (list): Training loggers for each model.
+        training_logs: Logs from training.
+        tuning_logs: Logs from hyperparameter tuning.
+    """
     def __init__(
         self,
         name = "Deep_Ensemble_Regressor",
@@ -103,6 +164,16 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         self.tuning_logs = None
 
     def nll_loss(self, preds, y): 
+        """
+        Negative log-likelihood loss assuming Gaussian outputs.
+
+        Args:
+            preds (torch.Tensor): Predicted means and variances, shape (batch_size, 2).
+            y (torch.Tensor): True target values, shape (batch_size,).
+
+        Returns:
+            (torch.Tensor): Scalar loss value.
+        """
         means = preds[:, 0]
         variances = preds[:, 1]
         precision = 1 / variances
@@ -111,6 +182,18 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         return nll.mean()
 
     def _train_single_model(self, X_tensor, y_tensor, input_dim, idx): 
+        """
+        Train a single ensemble member.
+
+        Args:
+            X_tensor (torch.Tensor): Input tensor.
+            y_tensor (torch.Tensor): Target tensor.
+            input_dim (int): Number of input features.
+            idx (int): Index of the model (for seeding and logging).
+
+        Returns:
+            (Tuple[MLP, Logger]): (trained model, logger instance)
+        """
         X_tensor = X_tensor.to(self.device)
         y_tensor = y_tensor.to(self.device)
 
@@ -160,6 +243,16 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         return model, logger
     
     def fit(self, X, y): 
+        """
+        Fit the ensemble on training data.
+
+        Args:
+            X (array-like or torch.Tensor): Training inputs.
+            y (array-like or torch.Tensor): Training targets.
+
+        Returns:
+            (DeepEnsembleRegressor): Fitted estimator.
+        """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
         input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
@@ -178,6 +271,22 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         return self
     
     def predict(self, X): 
+        """
+        Predicts the target values with uncertainty estimates.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            (Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]): Tuple containing:
+                mean predictions,
+                lower bound of the prediction interval,
+                upper bound of the prediction interval.
+        
+        !!! note
+            If `requires_grad` is False, all returned arrays are NumPy arrays.
+            Otherwise, they are PyTorch tensors with gradients.
+        """
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.scale_data: 
             X_tensor = self.input_scaler.transform(X_tensor)
@@ -215,6 +324,12 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             return mean, lower, upper
 
     def save(self, path):
+        """
+        Save the trained ensemble to disk.
+
+        Args:
+            path (str or pathlib.Path): Directory path to save the model and metadata.
+        """
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -251,6 +366,17 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
 
     @classmethod
     def load(cls, path, device="cpu", load_logs=False):
+        """
+        Load a saved ensemble regressor from disk.
+
+        Args:
+            path (str or pathlib.Path): Directory path to load the model from.
+            device (str or torch.device): Device to load the model onto.
+            load_logs (bool): Whether to load training and tuning logs.
+
+        Returns:
+            (DeepEnsembleRegressor): Loaded model instance.
+        """
         path = Path(path)
 
         # Load config

@@ -1,3 +1,23 @@
+"""
+Monte Carlo Dropout
+-------------------
+
+This module implements a Monte Carlo (MC) Dropout Regressor for regression on a one dimensional output
+with uncertainty quantification. It estimates
+predictive uncertainty by performing multiple stochastic forward passes through a dropout-enabled
+neural network.
+
+Key features are: 
+    - Customizable neural network architecture 
+    - Aleatoric uncertainty included with hyperparameter tau
+    - Prediction Intervals based on Gaussian assumption 
+    - Customizable optimizer and loss function
+    - Optional Input/Output Normalization
+
+!!! warning 
+    Using hyperparameter optimization to optimize the aleatoric uncertainty hyperparameter tau is often necessary to obtain correct predictive intervals!
+"""
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,6 +34,18 @@ import scipy.stats as st
 
 
 class MLP(nn.Module):
+    """
+    A simple feedforward neural network with dropout for regression.
+
+    This MLP supports customizable hidden layer sizes, activation functions,
+    and dropout. It outputs a single scalar per input — the predictive mean.
+
+    Args:
+        input_dim (int): Number of input features.
+        hidden_sizes (list of int): Sizes of the hidden layers.
+        dropout (float): Dropout rate (applied after each activation).
+        activation (callable): Activation function (e.g., nn.ReLU).
+    """
     def __init__(self, input_dim, hidden_sizes, dropout, activation):
         super().__init__()
         layers = []
@@ -30,12 +62,53 @@ class MLP(nn.Module):
 
 
 class MCDropoutRegressor(BaseEstimator, RegressorMixin):
+    """ 
+    MC Dropout Regressor with uncertainty estimation using neural networks. 
+
+    This class trains a dropout MLP and takes stochastic forward passes to provide predictive uncertainty intervals.
+    It makes a Gaussian assumption on the output distribution, and often requires tuning of the hyperparameter tau
+
+    Args:
+        name (str): Name of the model instance.
+        hidden_sizes (List[int]): Hidden layer sizes for the MLP.
+        dropout (float): Dropout rate to apply after each hidden layer.
+        tau (float): Precision parameter (used in predictive variance).
+        use_paper_weight_decay (bool): Whether to use paper's theoretical weight decay.
+        alpha (float): Significance level (1 - confidence level) for prediction intervals.
+        requires_grad (bool): Whether to track gradients in prediction output.
+        activation_str (str): Activation function name (e.g., "ReLU", "Tanh").
+        n_samples (int): Number of stochastic forward passes for prediction.
+        learning_rate (float): Learning rate for the optimizer.
+        epochs (int): Number of training epochs.
+        batch_size (int): Batch size for training.
+        optimizer_cls (Optimizer): PyTorch optimizer class.
+        optimizer_kwargs (dict): Optional kwargs to pass to optimizer.
+        scheduler_cls (Optional[Callable]): Optional learning rate scheduler class.
+        scheduler_kwargs (dict): Optional kwargs for the scheduler.
+        loss_fn (Callable): Loss function for training (default: MSE).
+        device (str): Device to run training/prediction on ("cpu" or "cuda").
+        use_wandb (bool): If True, logs training to Weights & Biases.
+        wandb_project (str): W&B project name.
+        wandb_run_name (str): W&B run name.
+        random_seed (Optional[int]): Seed for reproducibility.
+        scale_data (bool): Whether to standardize inputs and outputs.
+        input_scaler (Optional[TorchStandardScaler]): Custom input scaler.
+        output_scaler (Optional[TorchStandardScaler]): Custom output scaler.
+        tuning_loggers (List[Logger]): External loggers returned from hyperparameter tuning.
+
+    Attributes:
+        model (MLP): Trained PyTorch MLP model.
+        input_dim (int): Dimensionality of input features.
+        _loggers (Logger): Training logger.
+        training_logs: Logs from training.
+        tuning_logs: Logs from hyperparameter tuning.
+    """
     def __init__(
         self,
         name="MC_Dropout_Regressor",
         hidden_sizes=[64, 64],
         dropout=0.1,
-        tau=1.0,
+        tau=1.0e-6,
         use_paper_weight_decay=True,
         alpha=0.1,
         requires_grad=False, 
@@ -96,6 +169,13 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.tuning_logs = None
 
     def fit(self, X, y): 
+        """
+        Fit the MC Dropout model on training data.
+
+        Args:
+            X (array-like): Training features of shape (n_samples, n_features).
+            y (array-like): Target values of shape (n_samples,).
+        """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
         input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
@@ -163,6 +243,22 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         return self, logger
 
     def predict(self, X):
+        """
+        Predicts the target values with uncertainty estimates.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            (Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]): Tuple containing:
+                mean predictions,
+                lower bound of the prediction interval,
+                upper bound of the prediction interval.
+        
+        !!! note
+            If `requires_grad` is False, all returned arrays are NumPy arrays.
+            Otherwise, they are PyTorch tensors with gradients.
+        """
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
@@ -201,6 +297,12 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
             return mean, lower, upper
 
     def save(self, path):
+        """
+        Save model weights, config, and scalers to disk.
+
+        Args:
+            path (str or Path): Directory to save model components.
+        """
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -236,6 +338,17 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
 
     @classmethod
     def load(cls, path, device="cpu", load_logs=False):
+        """
+        Load a saved MC dropout regressor from disk.
+
+        Args:
+            path (str or pathlib.Path): Directory path to load the model from.
+            device (str or torch.device): Device to load the model onto.
+            load_logs (bool): Whether to load training and tuning logs.
+
+        Returns:
+            (MCDropoutRegressor): Loaded model instance.
+        """
         path = Path(path)
 
         # Load config

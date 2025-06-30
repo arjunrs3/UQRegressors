@@ -9,7 +9,7 @@ from uqregressors.conformal.cqr import ConformalQuantileRegressor
 from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.bayesian.gaussian_process import GPRegressor
-from uqregressors.bayesian.gaussian_process_torch import GPRegressorTorch
+from uqregressors.bayesian.bbmm_gp import BBMM_GP
 from uqregressors.utils.file_manager import FileManager
 
 # Set random seed for reproducibility
@@ -73,7 +73,7 @@ regressors_to_test = [
     (ConformalQuantileRegressor, "ConformalQuantileRegressor"),
     (MCDropoutRegressor, "MCDropoutRegressor"), 
     (GPRegressor, "GaussianProcessRegressor"), 
-    (GPRegressorTorch, "GPRegressorTorch"), 
+    (BBMM_GP, "BBMM_GP"), 
     (KFoldCQR, "KFoldCQR")
 ]
 

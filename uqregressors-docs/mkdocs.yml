@@ -1,0 +1,34 @@
+site_name: UQregressors
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+
+theme:
+  name: material
+  icon: 
+    admonition: 
+      warning: material/alert
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["../src"]
+
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - Examples: examples.md
+  - API Reference:
+      - Bayesian:
+        - Deep Ensembles: api/Bayesian/deep_ens.md
+        - Dropout: api/Bayesian/dropout.md 
+        - Gaussian Processes: api/Bayesian/gp.md 
+        - Gaussian Process (Black Box Matrix-Matrix Inference): api/Bayesian/bbmm_gp.md
+      - Conformal: api/conformal.md
+      - metrics: api/metrics.md
+      - Tuning: api/tuning.md
+      - Utils: api/utils.md
