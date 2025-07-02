@@ -1,14 +1,41 @@
+"""
+torch_sklearn_utils
+-------------------
+A collection of sklearn utility functions refactored to work with pytorch tensors. 
+
+The key functions are: 
+    - TorchStandardScaler (class)
+    - TorchKFold (class)
+    - train_test_split (function)
+
+!!! warning 
+    TorchKFold returns the indices of each K-Fold, while train_test_split returns the values in each split.
+"""
+
 import torch
 import numpy as np 
 
 class TorchStandardScaler:
+    """
+    Standardized scaling to 0 mean values with unit variance.
+
+    Attributes: 
+        mean_ (float): The mean of the data, subtracted from the data during scaling. 
+        std_ (float): The standard deviation of the data, by which the data is divided during scaling.
+    """
     def __init__(self):
         self.mean_ = None
         self.std_ = None
 
     def fit(self, X):
         """
-        X: torch.Tensor of shape (n_samples, n_features)
+        Fits the standard scaler. 
+        
+        Args: 
+            X (torch.Tensor): data to be scaled of shape (n_samples, n_features).
+
+        Returns: 
+            (TorchStandardScaler): the scaler with updated mean_ and std_ attributes. 
         """
         self.mean_ = X.mean(dim=0, keepdim=True)
         self.std_ = X.std(dim=0, unbiased=False, keepdim=True)
@@ -17,35 +44,55 @@ class TorchStandardScaler:
         return self
 
     def transform(self, X):
+        """
+        Transforms the standard scaler based on the attributes obtained with the fit method. 
+
+        Args: 
+            X (torch.Tensor): data to be scaled of shape (n_samples, n_features).
+
+        Returns: 
+            (torch.Tensor): The scaled data
+        """
         return (X - self.mean_) / self.std_
     
     def fit_transform(self, X): 
+        """
+        Performs the fit and transforms the data. A combination of the fit and transform methods.
+
+        Args: 
+            X (torch.Tensor): data to be scaled of shape (n_samples, n_features).
+
+        Returns: 
+            (torch.Tensor): The scaled data
+        """
         self.fit(X)
         return self.transform(X)
 
     def inverse_transform(self, X_scaled):
+        """
+        Transforms scaled data back to the original scale. 
+
+        Args: 
+            X_scaled (torch.Tensor): scaled data of shape (n_samples, n_features).
+
+        Returns: 
+            (torch.Tensor): The unscaled data. 
+        """
         return X_scaled * self.std_ + self.mean_
     
 def train_test_split(X, y, test_size=0.2, device="cpu", random_state=None, shuffle=True):
     """
     Split arrays or tensors into training and test sets.
     
-    Parameters:
-    -----------
-    X : array-like or torch.Tensor
-        Feature matrix.
-    y : array-like or torch.Tensor
-        Target vector.
-    test_size : float
-        Proportion of the dataset to include in the test split (between 0 and 1).
-    random_state : int or None
-        Controls the shuffling for reproducibility.
-    shuffle : bool
-        Whether or not to shuffle the data before splitting.
+    Args:
+        X (array-like or torch.Tensor): Features to be split. 
+        y (array-like or torch.Tensor): Targets to be split. 
+        test_size (float): Proportion of the dataset to include in the test split (between 0 and 1).
+        random_state (int or None): Controls the shuffling for reproducibility.
+        shuffle (bool): Whether or not to shuffle the data before splitting.
     
     Returns:
-    --------
-    X_train, X_test, y_train, y_test : same type as inputs
+        (Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]): X_train, X_test, y_train, y_test; same type as inputs
     """
     # Convert to numpy for easy indexing
     if isinstance(X, torch.Tensor):
@@ -91,6 +138,14 @@ def train_test_split(X, y, test_size=0.2, device="cpu", random_state=None, shuff
     return X_train, X_test, y_train, y_test
 
 class TorchKFold:
+    """
+    A class meant to split the data into K-folds for conformalization or cross validation. 
+
+    Args: 
+        n_splits (int): The number of folds for data splitting.
+        shuffle (bool): Whether to shuffle the data before splitting. 
+        random_state (int or None): Controls shuffling for reproducibility.
+    """
     def __init__(self, n_splits=5, shuffle=False, random_state=None):
         if n_splits < 2:
             raise ValueError("n_splits must be at least 2.")
@@ -102,14 +157,11 @@ class TorchKFold:
         """
         Yield train/test indices for each fold.
 
-        Parameters:
-        -----------
-        X : torch.Tensor, np.ndarray, or list
-            Input data with shape (n_samples, ...)
+        Args:
+            X (torch.Tensor, np.ndarray, or list): Input data with shape (n_samples, ...)
 
         Yields:
-        -------
-        train_idx, val_idx : torch.LongTensor
+            (tuple[torch.LongTensor, torch.LongTensor]): train_idx, val_idx; the indices of the training and validation sets for each of the splits. 
         """
         if isinstance(X, torch.Tensor):
             n_samples = X.shape[0]

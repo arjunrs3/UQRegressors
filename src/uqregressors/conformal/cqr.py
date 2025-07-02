@@ -1,3 +1,16 @@
+"""
+Conformalized Quantile Regression (CQR)
+----------
+
+This module implements CQR in a split conformal context for regression on a one dimensional output 
+
+Key features are: 
+    - Customizable neural network architecture
+    - Tunable quantiles of the underyling quantile regressor
+    - Prediction intervals without distributional assumptions  
+    - Customizable optimizer and loss function 
+    - Optional Input/Output Normalization 
+"""
 import numpy as np 
 import torch 
 import torch.nn as nn 
@@ -13,6 +26,18 @@ import json
 import pickle 
 
 class MLP(nn.Module): 
+    """
+    A simple feedforward neural network with dropout for regression.
+
+    This MLP supports customizable hidden layer sizes, activation functions,
+    and dropout. It outputs a single scalar per input — the predictive mean.
+
+    Args:
+        input_dim (int): Number of input features.
+        hidden_sizes (list of int): Sizes of the hidden layers.
+        dropout (float or None): Dropout rate (applied after each activation).
+        activation (callable): Activation function (e.g., nn.ReLU).
+    """
     def __init__(self, input_dim, hidden_sizes, dropout, activation): 
         super().__init__() 
         layers = [] 
@@ -29,6 +54,45 @@ class MLP(nn.Module):
         return self.model(x)
 
 class ConformalQuantileRegressor(BaseEstimator, RegressorMixin): 
+    """
+    Conformalized Quantile Regressor for uncertainty estimation in regression tasks.
+
+    This class trains one quantile neural network and conformalizes it with split conformal prediction
+
+    Args:
+        name (str): Name of the model.
+        hidden_sizes (list): Sizes of the hidden layers for each quantile regressor.
+        cal_size (float): Proportion of training samples to use for calibration, between 0 and 1. 
+        dropout (float or None): Dropout rate for the neural network layers.
+        alpha (float): Miscoverage rate (1 - confidence level).
+        requires_grad (bool): Whether inputs should require gradient.
+        tau_lo (float): Lower quantile, defaults to alpha/2.
+        tau_hi (float): Upper quantile, defaults to 1 - alpha/2.
+        activation_str (str): String identifier of the activation function.
+        learning_rate (float): Learning rate for training.
+        epochs (int): Number of training epochs.
+        batch_size (int): Batch size for training.
+        optimizer_cls (type): Optimizer class.
+        optimizer_kwargs (dict): Keyword arguments for optimizer.
+        scheduler_cls (type or None): Learning rate scheduler class.
+        scheduler_kwargs (dict): Keyword arguments for scheduler.
+        loss_fn (callable or None): Loss function, defaults to quantile loss.
+        device (str): Device to use for training and inference.
+        use_wandb (bool): Whether to log training with Weights & Biases.
+        wandb_project (str or None): wandb project name.
+        wandb_run_name (str or None): wandb run name.
+        scale_data (bool): Whether to normalize input/output data.
+        input_scaler (TorchStandardScaler): Scaler for input features.
+        output_scaler (TorchStandardScaler): Scaler for target outputs.
+        random_seed (int or None): Random seed for reproducibility.
+        tuning_loggers (list): Optional list of loggers for tuning.
+
+    Attributes: 
+        quantiles (Tensor): The lower and upper quantiles for prediction.
+        residuals (Tensor): The residuals on the calibration set. 
+        conformal_width (Tensor): The width needed to conformalize the quantile regressor, q. 
+        _loggers (list[Logger]): Training loggers for each ensemble member. 
+    """
     def __init__(
             self, 
             name="Conformal_Quantile_Regressor",
@@ -99,10 +163,27 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.tuning_logs = None
 
     def quantile_loss(self, preds, y): 
+        """
+        Quantile loss used for training the quantile regressor.
+
+        Args:
+            preds (Tensor): Predicted quantiles, shape (batch_size, 2).
+            y (Tensor): True target values, shape (batch_size,).
+
+        Returns:
+            (Tensor): Scalar loss.
+        """
         error = y.view(-1, 1) - preds 
         return torch.mean(torch.max(self.quantiles * error, (self.quantiles - 1) * error))
 
     def fit(self, X, y): 
+        """
+        Fit the conformal quantile regressor model on training data. 
+
+        Args:
+            X (array-like): Training features of shape (n_samples, n_features).
+            y (array-like): Target values of shape (n_samples,).
+        """
         X, y = validate_and_prepare_inputs(X, y, device=self.device)
 
         if self.random_seed is not None: 
@@ -173,6 +254,22 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         return self
 
     def predict(self, X): 
+        """
+        Predicts the target values with uncertainty estimates.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            (Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]): Tuple containing:
+                mean predictions,
+                lower bound of the prediction interval,
+                upper bound of the prediction interval.
+        
+        !!! note
+            If `requires_grad` is False, all returned arrays are NumPy arrays.
+            Otherwise, they are PyTorch tensors with gradients.
+        """
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         self.model.eval()
 
@@ -213,6 +310,12 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             return mean, lower, upper
     
     def save(self, path): 
+        """
+        Save model weights, config, and scalers to disk.
+
+        Args:
+            path (str or Path): Directory to save model components.
+        """
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -254,6 +357,17 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
 
     @classmethod
     def load(cls, path, device="cpu", load_logs=False): 
+        """
+        Load a saved MC dropout regressor from disk.
+
+        Args:
+            path (str or pathlib.Path): Directory path to load the model from.
+            device (str or torch.device): Device to load the model onto.
+            load_logs (bool): Whether to load training and tuning logs.
+
+        Returns:
+            (ConformalQuantileRegressor): Loaded model instance.
+        """
         path = Path(path)
         with open(path / "config.json", "r") as f:
             config = json.load(f)

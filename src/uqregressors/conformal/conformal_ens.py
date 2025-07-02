@@ -1,3 +1,15 @@
+"""
+Normalized Conformal Ensemble
+-----------------------------
+This module implements normalized conformal ensemble prediction in a split conformal context for regression on a one dimensional output 
+
+Key features are: 
+    - Customizable neural network architecture
+    - Customizable dropout to increase ensemble diversity
+    - Prediction intervals without distributional assumptions  
+    - Customizable optimizer and loss function 
+    - Optional Input/Output Normalization 
+"""
 import numpy as np 
 import torch
 import torch.nn as nn 
@@ -12,20 +24,19 @@ from pathlib import Path
 import json 
 import pickle
 
-def train_test_split(X, cal_size, seed=None):
-    if seed is not None: 
-        torch.manual_seed(seed)
-
-    n = len(X)
-    n_cal = int(np.ceil(cal_size * n))
-    all_idx = np.arange(n)
-    cal_idx = np.random.randint(n, size=n_cal)
-    mask = np.ones(n, dtype=bool)
-    mask[cal_idx] = False 
-    train_idx = all_idx[mask] 
-    return train_idx, cal_idx
-
 class MLP(nn.Module): 
+    """
+    A simple feedforward neural network with dropout for regression.
+
+    This MLP supports customizable hidden layer sizes, activation functions,
+    and dropout. It outputs a single scalar per input — the predictive mean.
+
+    Args:
+        input_dim (int): Number of input features.
+        hidden_sizes (list of int): Sizes of the hidden layers.
+        dropout (float): Dropout rate (applied after each activation).
+        activation (callable): Activation function (e.g., nn.ReLU).
+    """
     def __init__(self, input_dim, hidden_sizes, dropout, activation): 
         super().__init__()
         layers = []
@@ -43,6 +54,48 @@ class MLP(nn.Module):
         return self.model(x)
     
 class ConformalEnsRegressor(BaseEstimator, RegressorMixin): 
+    """
+    Conformal Ensemble Regressor for uncertainty estimation in regression tasks. 
+
+    This class trains an ensemble of MLP models, and applies normalized conformal prediction on a split
+    calibration set to calibrate prediction intervals. 
+
+    Args: 
+        name (str): Name of the model. 
+        n_estimators (int): Number of models to train. 
+        hidden_sizes (list): sizes of the hidden layers for each quantile regressor. 
+        alpha (float): Miscoverage rate (1 - confidence level). 
+        requires_grad (bool): Whether inputs should require gradient, determines output type.
+        dropout (float or None): Dropout rate for the neural network layers. 
+        pred_with_dropout (bool): Whether dropout should be applied at test time, dropout must be non-Null
+        activation_str (str): String identifier of the activation function. 
+        cal_size (float): Proportion of training samples to use for calibration, between 0 and 1.  
+        gamma (float): Stability constant added to difficulty score . 
+        learning_rate (float): Learning rate for training.
+        epochs (int): Number of training epochs.
+        batch_size (int): Batch size for training.
+        optimizer_cls (type): Optimizer class.
+        optimizer_kwargs (dict): Keyword arguments for optimizer.
+        scheduler_cls (type or None): Learning rate scheduler class.
+        scheduler_kwargs (dict): Keyword arguments for scheduler.
+        loss_fn (callable or None): Loss function, defaults to quantile loss.
+        device (str): Device to use for training and inference.
+        use_wandb (bool): Whether to log training with Weights & Biases.
+        wandb_project (str or None): wandb project name.
+        wandb_run_name (str or None): wandb run name.
+        n_jobs (float): Number of parallel jobs for training.
+        random_seed (int or None): Random seed for reproducibility.
+        scale_data (bool): Whether to normalize input/output data.
+        input_scaler (TorchStandardScaler): Scaler for input features.
+        output_scaler (TorchStandardScaler): Scaler for target outputs.
+        tuning_loggers (list): Optional list of loggers for tuning.
+
+    Attributes: 
+        models (list[QuantNN]): A list of the models in the ensemble.
+        residuals (Tensor): The combined residuals on the calibration set. 
+        conformal_width (Tensor): The width needed to conformalize the quantile regressor, q. 
+        _loggers (list[Logger]): Training loggers for each ensemble member. 
+    """
     def __init__(self, 
                  name="Conformal_Ens_Regressor",
                  n_estimators=5, 
@@ -170,6 +223,16 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         return model, cal_preds, logger
     
     def fit(self, X, y): 
+        """
+        Fit the ensemble on training data.
+
+        Args:
+            X (array-like or torch.Tensor): Training inputs.
+            y (array-like or torch.Tensor): Training targets.
+
+        Returns:
+            (ConformalEnsRegressor): Fitted estimator.
+        """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
         input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
@@ -178,7 +241,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
             X_tensor = self.input_scaler.fit_transform(X_tensor)
             y_tensor = self.output_scaler.fit_transform(y_tensor)
 
-        train_idx, cal_idx = train_test_split(X_tensor, 0.2, self.random_seed)
+        train_idx, cal_idx = self._train_test_split(X_tensor, 0.2, self.random_seed)
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, train_idx, cal_idx, i)
             for i in range(self.n_estimators)
@@ -198,6 +261,22 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         return self 
     
     def predict(self, X): 
+        """
+        Predicts the target values with uncertainty estimates.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            (Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]): Tuple containing:
+                mean predictions,
+                lower bound of the prediction interval,
+                upper bound of the prediction interval.
+        
+        !!! note
+            If `requires_grad` is False, all returned arrays are NumPy arrays.
+            Otherwise, they are PyTorch tensors with gradients.
+        """        
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.scale_data: 
             X_tensor = self.input_scaler.transform(X_tensor)
@@ -239,6 +318,12 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
             return mean, lower, upper
     
     def save(self, path):
+        """
+        Save the trained model and associated configuration to disk.
+
+        Args:
+            path (str or Path): Directory to save model files.
+        """
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -283,6 +368,17 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
 
     @classmethod
     def load(cls, path, device="cpu", load_logs=False):
+        """
+        Load a saved KFoldCQR model from disk.
+
+        Args:
+            path (str or Path): Directory containing saved model files.
+            device (str): Device to load the model on ("cpu" or "cuda").
+            load_logs (bool): Whether to also load training logs.
+
+        Returns:
+            (ConformalEnsRegressor): The loaded model instance.
+        """
         path = Path(path)
 
         # Load config
@@ -348,3 +444,20 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
             model.tuning_logs = tuning_logs
 
         return model
+    
+    def _train_test_split(self, X, cal_size, seed=None):
+        """
+        For internal use in calibration splitting only, 
+        see uqregressors/utils/torch_sklearn_utils for a global version
+        """
+        if seed is not None: 
+            torch.manual_seed(seed)
+
+        n = len(X)
+        n_cal = int(np.ceil(cal_size * n))
+        all_idx = np.arange(n)
+        cal_idx = np.random.randint(n, size=n_cal)
+        mask = np.ones(n, dtype=bool)
+        mask[cal_idx] = False 
+        train_idx = all_idx[mask] 
+        return train_idx, cal_idx

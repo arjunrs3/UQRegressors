@@ -1,4 +1,4 @@
-# BlackBox Matrix-Matrix Inference Gaussian Process 
+# uqregressors.bayesian.bbmm_gp
 
 A wrapper for [GPyTorch](https://docs.gpytorch.ai/en/v1.7.0/examples/02_Scalable_Exact_GPs/#blackbox-matrix-matrix-inference-bbmm) 
 is created which implements BlackBox Matrix-Matrix Inference Gaussian Process regression (BBMM-GP) as described in 

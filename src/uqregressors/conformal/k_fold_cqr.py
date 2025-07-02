@@ -1,3 +1,17 @@
+"""
+K-Fold-CQR
+----------
+
+This module implements conformal quantile regression in a K-fold manner for regression of a one dimensional output. 
+
+Key features are: 
+    - Customizable neural network architecture
+    - Tunable quantiles of the underyling regressors
+    - Prediction intervals without distributional assumptions 
+    - Parallel training of ensemble models with Joblib 
+    - Customizable optimizer and loss function 
+    - Optional Input/Output Normalization 
+"""
 import numpy as np 
 import torch 
 import torch.nn as nn 
@@ -13,6 +27,16 @@ import json
 import pickle
 
 class QuantNN(nn.Module): 
+    """
+    A simple quantile neural network that estimates the lower and upper quantile when trained
+    with a pinball loss function. 
+
+    Args: 
+        input_dim (int): Number of input features 
+        hidden_sizes (list of int): List of hidden layer sizes
+        dropout (None or float): The dropout probability - None if no dropout
+        activation (torch.nn.Module): Activation function class (e.g., nn.ReLU).
+    """
     def __init__(self, input_dim, hidden_sizes, dropout, activation): 
         super().__init__()
         layers = []
@@ -31,6 +55,48 @@ class QuantNN(nn.Module):
     
 
 class KFoldCQR(BaseEstimator, RegressorMixin): 
+    """
+    K-Fold Conformalized Quantile Regressor for uncertainty estimation in regression tasks.
+
+    This class trains an ensemble of quantile neural networks using K-Fold cross-validation,
+    and applies conformal prediction to calibrate prediction intervals.
+
+    Args:
+        name (str): Name of the model.
+        n_estimators (int): Number of K-Fold models to train.
+        hidden_sizes (list): Sizes of the hidden layers for each quantile regressor.
+        dropout (float or None): Dropout rate for the neural network layers.
+        alpha (float): Miscoverage rate (1 - confidence level).
+        requires_grad (bool): Whether inputs should require gradient.
+        tau_lo (float): Lower quantile, defaults to alpha/2.
+        tau_hi (float): Upper quantile, defaults to 1 - alpha/2.
+        n_jobs (int): Number of parallel jobs for training.
+        activation_str (str): String identifier of the activation function.
+        learning_rate (float): Learning rate for training.
+        epochs (int): Number of training epochs.
+        batch_size (int): Batch size for training.
+        optimizer_cls (type): Optimizer class.
+        optimizer_kwargs (dict): Keyword arguments for optimizer.
+        scheduler_cls (type or None): Learning rate scheduler class.
+        scheduler_kwargs (dict): Keyword arguments for scheduler.
+        loss_fn (callable or None): Loss function, defaults to quantile loss.
+        device (str): Device to use for training and inference.
+        use_wandb (bool): Whether to log training with Weights & Biases.
+        wandb_project (str or None): wandb project name.
+        wandb_run_name (str or None): wandb run name.
+        scale_data (bool): Whether to normalize input/output data.
+        input_scaler (TorchStandardScaler): Scaler for input features.
+        output_scaler (TorchStandardScaler): Scaler for target outputs.
+        random_seed (int or None): Random seed for reproducibility.
+        tuning_loggers (list): Optional list of loggers for tuning.
+
+    Attributes: 
+        quantiles (Tensor): The lower and upper quantiles for prediction.
+        models (list[QuantNN]): A list of the models in the ensemble.
+        residuals (Tensor): The combined residuals on the calibration sets. 
+        conformal_width (Tensor): The width needed to conformalize the quantile regressor, q. 
+        _loggers (list[Logger]): Training loggers for each ensemble member. 
+    """
     def __init__(
             self, 
             name="K_Fold_CQR_Regressor",
@@ -86,7 +152,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         self.n_jobs = n_jobs
         self.random_seed = random_seed
-        self.quantiles = torch.tensor([self.alpha / 2, 1 - self.alpha / 2], device=self.device)
+        self.quantiles = torch.tensor([self.tau_lo, self.tau_hi], device=self.device)
         self.models = []
         self.residuals = []
         self.conformal_width = None
@@ -104,6 +170,16 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
 
     def quantile_loss(self, preds, y): 
+        """
+        Quantile loss used for training the quantile regressors.
+
+        Args:
+            preds (Tensor): Predicted quantiles, shape (batch_size, 2).
+            y (Tensor): True target values, shape (batch_size,).
+
+        Returns:
+            (Tensor): Scalar loss.
+        """
         error = y.view(-1, 1) - preds
         return torch.mean(torch.max(self.quantiles * error, (self.quantiles - 1) * error))
 
@@ -163,6 +239,16 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         return model, residuals, logger
     
     def fit(self, X, y): 
+        """
+        Fit the ensemble on training data.
+
+        Args:
+            X (array-like or torch.Tensor): Training inputs.
+            y (array-like or torch.Tensor): Training targets.
+
+        Returns:
+            (KFoldCQR): Fitted estimator.
+        """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
         input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
@@ -186,6 +272,22 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         return self
     
     def predict(self, X): 
+        """
+        Predicts the target values with uncertainty estimates.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            (Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]): Tuple containing:
+                mean predictions,
+                lower bound of the prediction interval,
+                upper bound of the prediction interval.
+        
+        !!! note
+            If `requires_grad` is False, all returned arrays are NumPy arrays.
+            Otherwise, they are PyTorch tensors with gradients.
+        """
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         n = len(self.residuals)
         q = int((1 - self.alpha) * (n + 1))
@@ -229,6 +331,12 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             return mean, lower, upper
     
     def save(self, path):
+        """
+        Save the trained model and associated configuration to disk.
+
+        Args:
+            path (str or Path): Directory to save model files.
+        """
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -272,6 +380,17 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
     @classmethod
     def load(cls, path, device="cpu", load_logs=False):
+        """
+        Load a saved KFoldCQR model from disk.
+
+        Args:
+            path (str or Path): Directory containing saved model files.
+            device (str): Device to load the model on ("cpu" or "cuda").
+            load_logs (bool): Whether to also load training logs.
+
+        Returns:
+            (KFoldCQR): The loaded model instance.
+        """
         path = Path(path)
 
         # Load config

@@ -1,3 +1,13 @@
+"""
+Tuning contains the helper function tune_hyperparams which uses the Bayesian hyperparameter optimization framework, [Optuna](https://optuna.org/)
+as well as some examples of potential scoring functions. 
+
+Important features of this hyperparameter optimization method are: 
+    - Customizable scoring function 
+    - Customizable hyperparameters to be tuned 
+    - Customizable number of tuning iterations, search space 
+    - Support for cross-validation 
+"""
 from skopt import BayesSearchCV
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import train_test_split, KFold
@@ -11,6 +21,9 @@ import copy
 warnings.filterwarnings("ignore")
 
 def interval_score(estimator, X, y): 
+    """
+    Example of interval_score scoring function for hyperparameter tuning, greater=False
+    """
     alpha = estimator.alpha
     _, lower, upper = estimator.predict(X)
     width = upper - lower
@@ -19,10 +32,16 @@ def interval_score(estimator, X, y):
     return np.mean(width + penalty_lower + penalty_upper)
 
 def interval_width(estimator, X, y): 
+    """
+    Example of minimizing interval width scoring function for hyperparameter tuning, greater=False
+    """
     _, lower, upper = estimator.predict(X)
     return np.mean(upper - lower)
 
 def log_likelihood(estimator, X, y): 
+    """
+    Example of maximizing log likelihood scoring function for hyperparameter tuning, greater=True
+    """
     mean, lower, upper = estimator.predict(X)
     alpha = estimator.alpha 
     z = norm.ppf(1 - alpha / 2)
@@ -49,19 +68,21 @@ def tune_hyperparams(
 
     Supports CV when n_splits > 1, otherwise uses train/val split.
 
-    Parameters:
-        regressor: An instance of a base regressor (must have .fit and .predict).
-        param_space: Dict mapping param name → optuna suggest function (e.g., lambda t: t.suggest_float(...)).
-        X, y: Training data.
-        score_fn: Callable(estimator, X_val, y_val) → float
-        greater_is_better: Whether score_fn should be maximized or minimized.
-        n_trials: Number of Optuna trials.
-        n_splits: If >1, uses KFold CV; otherwise single train/val split.
-        random_state: For reproducibility.
-        verbose: Print status messages.
+    Args:
+        regressor (BaseEstimator): An instance of a base regressor (must have .fit and .predict).
+        param_space (dict): Dict mapping param name → optuna suggest function (e.g., lambda t: t.suggest_float(...)).
+        X (Union[torch.Tensor, np.ndarray, pd.DataFrame, pd.Series]): Training inputs.
+        y (Union[torch.Tensor, np.ndarray, pd.DataFrame, pd.Series]): Training targets.
+        score_fn (Callable(estimator, X_val, y_val) → float): Scoring function.
+        greater_is_better (bool): Whether score_fn should be maximized (True) or minimized (False).
+        n_trials (int): Number of Optuna trials.
+        n_splits (int): If >1, uses KFold CV; otherwise single train/val split.
+        random_state (int): For reproducibility.
+        verbose (bool): Print status messages.
     
     Returns:
-        best_estimator, best_score, optuna.study
+        (Tuple[BaseEstimator, float, optuna.study]): A tuple containing the estimator with the optimized 
+                                                     hyperparameters, the minimum score, and the optuna study object
     """
 
     direction = "maximize" if greater_is_better else "minimize"

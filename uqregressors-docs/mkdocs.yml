@@ -4,6 +4,7 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - mdx_math
 
 theme:
   name: material
@@ -18,6 +19,10 @@ plugins:
         python:
           paths: ["../src"]
 
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+  
+
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
@@ -28,7 +33,16 @@ nav:
         - Dropout: api/Bayesian/dropout.md 
         - Gaussian Processes: api/Bayesian/gp.md 
         - Gaussian Process (Black Box Matrix-Matrix Inference): api/Bayesian/bbmm_gp.md
-      - Conformal: api/conformal.md
-      - metrics: api/metrics.md
+      - Conformal: 
+        - Conformal Quantile Regression: api/Conformal/cqr.md 
+        - K-Fold Conformal Quantile Regression: api/Conformal/k_fold_cqr.md 
+        - Normalized Conformal Ensemble: api/Conformal/conformal_ens.md
+      - Metrics: api/metrics.md
       - Tuning: api/tuning.md
-      - Utils: api/utils.md
+      - Plotting: api/plotting.md
+      - Utils: 
+        - Activations: api/Utils/activations.md
+        - Data Loader: api/Utils/data_loader.md
+        - File Manager: api/Utils/file_manager.md
+        - Logging: api/Utils/logging.md 
+        - Torch Sklearn Utils: api/Utils/torch_sklearn_utils.md

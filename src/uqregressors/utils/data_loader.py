@@ -1,3 +1,14 @@
+"""
+data_loader
+-----------
+A collection of methods meant to help with dataset loading and cleaning. 
+
+The most useful user-facing methods are: 
+    - load_unformatted_dataset
+    - clean_dataset 
+    - validate_dataset 
+"""
+
 import os 
 import pandas as pd 
 import numpy as np
@@ -5,23 +16,16 @@ import torch
 
 def load_unformatted_dataset(path, target_column=None, drop_columns=None):
     """
-    Load and standardize a dataset from a file.
+    Load and standardize a dataset from a file. Note that the last column is always assumed to be the target.
 
-    Parameters:
-    -----------
-    path : str
-        Path to the dataset file (CSV, XLSX, ARFF, etc.)
-    target_column : str or int, optional
-        Name or index of the target column.
-    drop_columns : list of str or int, optional
-        Columns to drop (e.g., indices, metadata).
+    Args:
+        path (str): Path to the dataset file (CSV, XLSX, ARFF, etc.)
+        target_column (Union[str, int, None]): Name or index of the target column. If not provided, it is assumed the last column
+        drop_columns (list): Columns to drop (e.g., indices, column names).
 
     Returns:
-    --------
-    X : np.ndarray
-        Input features (n_samples, n_features)
-    y : np.ndarray
-        Target values (n_samples,)
+        X (np.ndarray): Input features (n_samples, n_features)
+        y (np.ndarray): Target values (n_samples,)
     """
 
     ext = os.path.splitext(path)[-1].lower()
@@ -69,19 +73,79 @@ def load_unformatted_dataset(path, target_column=None, drop_columns=None):
 
     return X, y
 
+def clean_dataset(X, y): 
+    """
+    A simple helper method to drop missing or NaN values and reshape y to the correct size
+
+    Args: 
+        X (Union[np.ndarray, pd.DataFrame, pd.Series]): Input features (n_samples, n_features)
+        y (Union[np.ndarray, pd.DataFrame, pd.Series]): Output targets (n_samples,)
+
+    Returns: 
+        X_clean (np.ndarray): Input features cleaned (n_samples, n_features)
+        y_clean (np.ndarray): Output targets cleaned (n_samples, 1)
+    """
+    X_df = pd.DataFrame(X)
+    y_series = pd.Series(y) if isinstance(y, (np.ndarray, list)) else pd.Series(y.values)
+
+    combined = pd.concat([X_df, y_series], axis=1)
+    combined_clean = combined.dropna()
+
+    X_clean = combined_clean.iloc[:, :-1].astype(np.float32).values
+    y_clean = combined_clean.iloc[:, -1].astype(np.float32).values.reshape(-1, 1)
+
+    return X_clean, y_clean
+
+def validate_dataset(X, y, name="unnamed"): 
+    """
+    A simple helper method to validate that a dataset is ready for regression. 
+    Raises errors if X and y are not of the correct shape, or if the dataset contains NaNs or missing values. 
+    If a dataset fails this method, try to apply the clean_dataset method first, and try again. 
+
+    Args: 
+        X (Union[np.ndarray, pd.DataFrame, pd.Series]): Input features (n_samples, n_features)
+        y (Union[np.ndarray, pd.DataFrame, pd.Series]): Output targets (n_samples,)
+    """
+    print(f"Summary for: {name} dataset")
+    print("=" * (21 + len(name)))
+
+    if isinstance(X, pd.DataFrame): 
+        X = X.values 
+    if isinstance(y, (pd.Series, pd.DataFrame)): 
+        y = y.values 
+
+    if X.ndim != 2: 
+        raise ValueError("X must be a 2D array (n_samples, n_features)")
+    if y.ndim == 2 and y.shape[1] != 1: 
+        raise ValueError("y must be 1D or a 2D column vector with shape (n_samples, 1)")
+    if y.ndim > 2: 
+        raise ValueError("y must be 1D or 2D with a single output")
+    
+    n_samples, n_features = X.shape 
+
+    if y.shape[0] != n_samples: 
+        raise ValueError("X and y must have the same number of samples")
+    
+    if np.isnan(X).any() or np.isnan(y).any(): 
+        raise ValueError("Dataset contains NaNs or missing values.")
+    
+    if not np.issubdtype(X.dtype, np.floating):
+        raise ValueError("X must contain only float values (use float32 or float64)")
+
+    print(f"Number of samples: {n_samples}")
+    print(f"Number of features: {n_features}")
+    print(f"Output shape: {y.shape}")
+    print("Dataset validation passed.\n") 
+
 def load_arff(path):
     """
-    Minimal ARFF file loader without external dependencies.
+    ARFF file loader.
 
-    Parameters:
-    -----------
-    path : str
-        Path to the ARFF file.
+    Args:
+        path (str): Path to the ARFF file.
 
     Returns:
-    --------
-    df : pd.DataFrame
-        Parsed ARFF data as a DataFrame.
+        df (pd.DataFrame): Parsed ARFF data as a DataFrame.
     """
     attributes = []
     data = []
@@ -111,23 +175,17 @@ def load_arff(path):
 
 def validate_and_prepare_inputs(X, y, device="cpu", requires_grad=False):
     """
-    Convert X and y into compatible torch.Tensors for training.
+    Convert X and y into compatible torch.Tensors for training. Called by regressors before the fit method. 
     
-    Parameters
-    ----------
-    X : array-like
-        Feature matrix. Supports np.ndarray, pd.DataFrame, list, or torch.Tensor.
-    y : array-like
-        Target vector. Supports np.ndarray, pd.Series, list, or torch.Tensor.
-    device : str
-        Device to place tensors on (e.g., 'cpu' or 'cuda').
-    requires_grad : bool
-        Whether the X tensor should require gradients (for gradient-based inference).
+    Args:
+        X (array-like): Feature matrix. Supports np.ndarray, pd.DataFrame, list, or torch.Tensor.
+        y (array-like): Target vector. Supports np.ndarray, pd.Series, list, or torch.Tensor.
+        device (str): Device to place tensors on (e.g., 'cpu' or 'cuda').
+        requires_grad (bool): Whether the X tensor should require gradients (for gradient-based inference).
     
-    Returns
-    -------
-    X_tensor : torch.Tensor of shape (n_samples, n_features)
-    y_tensor : torch.Tensor of shape (n_samples, 1)
+    Returns: 
+        X_tensor (torch.Tensor): Input features of shape (n_samples, n_features)
+        y_tensor (torch.Tensor): Output targets of shape (n_samples, 1)
     """
     # --- Convert X ---
     if isinstance(X, pd.DataFrame) or isinstance(X, pd.Series):
@@ -188,20 +246,15 @@ def validate_and_prepare_inputs(X, y, device="cpu", requires_grad=False):
 
 def validate_X_input(X, input_dim = None, device="cpu", requires_grad=False):
     """
-    Convert X to a torch.Tensor for inference.
+    Convert X to a torch.Tensor for inference. Called by regressors before the predict method. 
     
-    Parameters
-    ----------
-    X : array-like
-        Input data to convert.
-    device : str
-        Target device ('cpu' or 'cuda').
-    requires_grad : bool
-        Whether the tensor should track gradients.
+    Args: 
+        X (array-like): Input data to convert, should have shape (n_samples, n_features)
+        device (str): Target device ('cpu' or 'cuda').
+        requires_grad (bool): Whether the tensor should track gradients.
     
-    Returns
-    -------
-    torch.Tensor of shape (n_samples, n_features)
+    Returns:
+        (torch.Tensor): Prediction inputs of shape (n_samples, n_features)
     """
     if isinstance(X, pd.DataFrame) or isinstance(X, pd.Series):
         X = X.values

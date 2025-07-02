@@ -1,4 +1,4 @@
-# Gaussian Process Regressors
+# uqregressors.bayesian.gaussian_process
 
 This is a compatibility wrapper of the [scikit-learn Gaussian Process Regressor](https://scikit-learn.org/stable/modules/gaussian_process.html) 
 such that predictions return intervals rather than means and/or standard deviations. 
