@@ -18,7 +18,8 @@ dependencies = [
   "seaborn", 
   "xlrd", 
   "openpyxl", 
-  "scikit-optimize"
+  "scikit-optimize", 
+  "optuna"
 ]
 
 [project.optional-dependencies]
