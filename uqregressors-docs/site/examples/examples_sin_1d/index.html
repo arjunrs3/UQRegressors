@@ -1,0 +1,1683 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../..">
+      
+      
+        <link rel="next" href="../../api/Bayesian/deep_ens/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+    
+    
+      
+        <title>Getting Started - UQregressors</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
+      
+      
+  
+  
+    
+    
+  
+  
+  <style>:root{--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M13%2014h-2V9h2m0%209h-2v-2h2M1%2021h22L12%202z%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#getting-started" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="UQregressors" class="md-header__button md-logo" aria-label="UQregressors" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            UQregressors
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting Started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="UQregressors" class="md-nav__button md-logo" aria-label="UQregressors" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    UQregressors
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dataset-generation-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dataset Generation / Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#regressors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regressors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Regressors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mc-dropout" class="md-nav__link">
+    <span class="md-ellipsis">
+      MC Dropout
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deep-ensemble" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deep Ensemble
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#standard-gaussian-process-regression-gpr" class="md-nav__link">
+    <span class="md-ellipsis">
+      Standard Gaussian Process Regression (GPR)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bbmm-gaussian-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      BBMM Gaussian Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#split-conformal-quantile-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      Split Conformal Quantile Regression
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k-fold-conformal-quantile-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      K-fold Conformal Quantile Regression
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#normalized-conformalens" class="md-nav__link">
+    <span class="md-ellipsis">
+      Normalized ConformalEns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metrics
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visualization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualization
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visualization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calibration-curves" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calibration Curves
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#predicted-vs-true-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Predicted vs. True Values
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hyperparameter-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hyperparameter Tuning
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Bayesian
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            Bayesian
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/deep_ens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Deep Ensembles
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/dropout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dropout
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/gp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Gaussian Processes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/bbmm_gp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Gaussian Process (Black Box Matrix-Matrix Inference)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Conformal
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            Conformal
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Conformal/cqr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Conformal Quantile Regression
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Conformal/k_fold_cqr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    K-Fold Conformal Quantile Regression
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Conformal/conformal_ens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Normalized Conformal Ensemble
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Metrics
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tuning
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/plotting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Plotting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Utils
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            Utils
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/activations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Activations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/data_loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data Loader
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/file_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File Manager
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Logging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/torch_sklearn_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Torch Sklearn Utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dataset-generation-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dataset Generation / Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#regressors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regressors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Regressors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mc-dropout" class="md-nav__link">
+    <span class="md-ellipsis">
+      MC Dropout
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deep-ensemble" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deep Ensemble
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#standard-gaussian-process-regression-gpr" class="md-nav__link">
+    <span class="md-ellipsis">
+      Standard Gaussian Process Regression (GPR)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bbmm-gaussian-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      BBMM Gaussian Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#split-conformal-quantile-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      Split Conformal Quantile Regression
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k-fold-conformal-quantile-regression" class="md-nav__link">
+    <span class="md-ellipsis">
+      K-fold Conformal Quantile Regression
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#normalized-conformalens" class="md-nav__link">
+    <span class="md-ellipsis">
+      Normalized ConformalEns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metrics
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visualization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualization
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visualization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#calibration-curves" class="md-nav__link">
+    <span class="md-ellipsis">
+      Calibration Curves
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#predicted-vs-true-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Predicted vs. True Values
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hyperparameter-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hyperparameter Tuning
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="getting-started">Getting Started:</h1>
+<p>This is an example script to demonstrate the capabilities of UQregressors with some examples that you can copy and paste to start generating results in a matter of minutes. If you are considering whether to use this package and do not need a detailed implementation and explanation yet, please check the "Is UQregressors right for you?" examples page. </p>
+<p>There are five main capabilities of UQregessors: </p>
+<ol>
+<li><strong>Dataset</strong> Loading and Validation </li>
+<li><strong>Regressors</strong> of various types created with Uncertainty Quantification (UQ) capability</li>
+<li><strong>Hyperparameter Tuning</strong> using bayesian optimization (wrapper around Optuna)</li>
+<li><strong>Metrics</strong> for evaluating goodness of fit and quality of uncertainty intervals</li>
+<li><strong>Visualization</strong> of metrics, goodness of fit, and quality of uncertainty intervals</li>
+</ol>
+<p>This script demonstrates basic usage of each of these five features by creating a data set from realizations of a 1-dimensional sine wave generator with some small added noise, the magnitude of which varies with the input coordinate. </p>
+<h3 id="dataset-generation-validation">Dataset Generation / Validation</h3>
+<p>As an example for this notebook, we will draw samples from a sine function with small added noise that scales with x.
+<script type="math/tex; mode=display"> 
+y=\sin(2 \pi x) + 0.1 \epsilon x, \epsilon \sim \mathcal{N}(0,1)
+</script>
+</p>
+<p>A dataset is considered to be a sequence of input values (<code>x</code>) of shape (n_samples, n_features), and a one dimensional target (<code>y</code>), which is contained in a 2D array of shape (n_samples, 1). </p>
+<p>We introduce the methods <code>clean_dataset</code> and <code>validate_dataset</code> to deal with missing values and to verify that the inputs and targets are shaped correctly and have the same number of samples. <code>validate_dataset</code> should be called each time a new dataset is loaded. If <code>validate_dataset</code> fails, we can call <code>clean_dataset</code> before in order to coerce <code>x</code> and <code>y</code> into the right form. Additionally, we generate a test set of data samples to evaluate on. </p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.utils.data_loader</span><span class="w"> </span><span class="kn">import</span> <span class="n">clean_dataset</span><span class="p">,</span> <span class="n">validate_dataset</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span> <span class="c1"># For visualization</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;font.size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">20</span>
+
+<span class="c1"># Set Random Seed for Reproducibility</span>
+<span class="n">seed</span> <span class="o">=</span> <span class="mi">42</span> 
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">RandomState</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+<span class="c1"># Define a data generator function to generate targets from features</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">true_function</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+    <span class="n">noise</span> <span class="o">=</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">noise</span>
+
+<span class="n">n_test</span> <span class="o">=</span> <span class="mi">250</span> 
+<span class="n">n_train</span> <span class="o">=</span> <span class="mi">150</span>
+
+<span class="n">X_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_test</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">y_test</span> <span class="o">=</span> <span class="n">true_function</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+<span class="n">y_noiseless</span> <span class="o">=</span> <span class="n">true_function</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">X_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_train</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">y_train</span> <span class="o">=</span> <span class="n">true_function</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span> 
+
+<span class="c1"># clean_dataset drops missing or NaN values and reshapes X and y to 2D np arrays</span>
+<span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span> <span class="o">=</span> <span class="n">clean_dataset</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+
+<span class="c1"># Confirm the shapes of X and y, and that there are no missing or NaN values</span>
+<span class="n">validate_dataset</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Synthetic Sine&quot;</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>Summary for: Synthetic Sine dataset
+===================================
+Number of samples: 150
+Number of features: 1
+Output shape: (150, 1)
+Dataset validation passed.
+</code></pre>
+<p>We also define a plotting function that can be used to visualize regressor results: </p>
+<div class="highlight"><pre><span></span><code><span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;whitegrid&quot;</span><span class="p">,</span> <span class="n">font_scale</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+<span class="n">colors</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">color_palette</span><span class="p">(</span><span class="s2">&quot;deep&quot;</span><span class="p">)</span>
+<span class="c1"># Seaborn colors</span>
+<span class="n">color_true</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>    <span class="c1"># blue</span>
+<span class="n">color_train</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>   <span class="c1"># orange</span>
+<span class="n">color_test</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>    <span class="c1"># green</span>
+<span class="n">color_mean</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>    <span class="c1"># red</span>
+<span class="n">color_interval</span> <span class="o">=</span> <span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># purple or teal depending on palette</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_noiseless</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_true</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;True Function&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_train</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Training Data&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_test</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Testing Data&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_uncertainty_results</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">model_name</span><span class="p">):</span> 
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+    <span class="c1"># Plot true function</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_noiseless</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_true</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;True Function&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Training and testing data</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_train</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Training Data&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_test</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Testing Data&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Predicted mean and uncertainty</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_mean</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Predicted Mean&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X_test</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color_interval</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Uncertainty Interval&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Plot settings</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2"> Uncertainty Test&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">frameon</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_3_0.png" /></p>
+<h2 id="regressors">Regressors</h2>
+<p>Regressors are models which predict <code>y</code> from <code>x</code>. Regressors follow the scikit-learn API, where they are first initialized with all relevant settings, then optimized to fit the training data with the <code>fit(X, y)</code> function. New predictions are made with the <code>predict(X)</code> method, which will return the Tuple <code>(mean, lower, upper)</code>, where each of these elements is a one dimensional array containing the mean prediction, the predicted lower bound, and the predicted upper bound. Confidence is controlled with the <code>alpha</code> parameter, where the confidence level is 1 - <code>alpha</code>. For example, to construct 95% confidence intervals, set <code>alpha=0.05</code>. </p>
+<p>Each regressor also has a <code>save</code> and <code>load</code> method, which stores the regressor parameters, along with any metrics, training, and testing data to disk. These functions are explored in detail in other example files. Each type of regressor currently implemented is fit to the sine function above, and visualized. </p>
+<p>These examples solely describe the implementation and some key parameters of the regressor types. A detailed description of each regressor type is available in the Regressor Details section of the documentation. </p>
+<h3 id="mc-dropout">MC Dropout</h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.bayesian.dropout</span><span class="w"> </span><span class="kn">import</span> <span class="n">MCDropoutRegressor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.utils.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_logging_config</span>
+
+<span class="n">set_logging_config</span><span class="p">(</span><span class="nb">print</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Disable logging for all future regressors for cleanliness</span>
+
+<span class="n">dropout</span> <span class="o">=</span> <span class="n">MCDropoutRegressor</span><span class="p">(</span>
+    <span class="n">hidden_sizes</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
+    <span class="n">dropout</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="c1"># Dropout probability before each layer</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>  <span class="c1"># 90% confidence</span>
+    <span class="n">tau</span><span class="o">=</span><span class="mf">1e6</span><span class="p">,</span> <span class="c1"># Aleatoric Uncertainty; should be tuned to provide accurate intervals</span>
+    <span class="n">n_samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="c1"># Number of forward passes during predictions</span>
+    <span class="n">scale_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Internally standardizes the data before training and prediction</span>
+    <span class="n">epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>  <span class="c1"># use &quot;cuda&quot; if GPU available</span>
+    <span class="n">use_wandb</span><span class="o">=</span><span class="kc">False</span> <span class="c1"># Weights and biases logging as an experimental feature</span>
+<span class="p">)</span>
+
+<span class="c1"># sklearn fit and predict API</span>
+<span class="n">dropout</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">dropout_sol</span> <span class="o">=</span> <span class="n">dropout</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span> <span class="c1"># dropout_sol = (mean_prediction, lower_bound, upper_bound)</span>
+
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">dropout_sol</span><span class="p">,</span> <span class="s2">&quot;MC Dropout Regressor&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_5_0.png" /></p>
+<h3 id="deep-ensemble">Deep Ensemble</h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.bayesian.deep_ens</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeepEnsembleRegressor</span>
+
+<span class="n">deep_ens</span> <span class="o">=</span> <span class="n">DeepEnsembleRegressor</span><span class="p">(</span>
+    <span class="n">n_estimators</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of estimators to use within the ensemble</span>
+    <span class="n">hidden_sizes</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">scale_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> 
+    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="c1"># Experimental: Number of parallel jobs using joblib</span>
+    <span class="n">use_wandb</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">deep_ens</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">deep_ens_sol</span> <span class="o">=</span> <span class="n">deep_ens</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">deep_ens_sol</span><span class="p">,</span> <span class="s2">&quot;Deep Ensemble Regressor&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_7_0.png" /></p>
+<h3 id="standard-gaussian-process-regression-gpr">Standard Gaussian Process Regression (GPR)</h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.bayesian.gaussian_process</span><span class="w"> </span><span class="kn">import</span> <span class="n">GPRegressor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.gaussian_process.kernels</span><span class="w"> </span><span class="kn">import</span> <span class="n">RBF</span><span class="p">,</span> <span class="n">WhiteKernel</span>
+
+<span class="n">gp_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;normalize_y&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+<span class="n">gpr</span> <span class="o">=</span> <span class="n">GPRegressor</span><span class="p">(</span>
+    <span class="n">kernel</span><span class="o">=</span> <span class="n">RBF</span><span class="p">(</span><span class="n">length_scale</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">length_scale_bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span> <span class="n">WhiteKernel</span><span class="p">(</span><span class="n">noise_level</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="c1"># Kernel function supported by sklearn</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
+    <span class="n">gp_kwargs</span><span class="o">=</span><span class="n">gp_kwargs</span> <span class="c1"># keyword arguments to sklearn&#39;s GPRegressor</span>
+    <span class="p">)</span>
+
+<span class="n">gpr</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">gp_sol</span> <span class="o">=</span> <span class="n">gpr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">gp_sol</span><span class="p">,</span> <span class="s2">&quot;Gaussian Process Regressor&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_9_0.png" /></p>
+<h3 id="bbmm-gaussian-process">BBMM Gaussian Process</h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.bayesian.bbmm_gp</span><span class="w"> </span><span class="kn">import</span> <span class="n">BBMM_GP</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gpytorch</span>
+
+<span class="n">bbmm_gp</span> <span class="o">=</span> <span class="n">BBMM_GP</span><span class="p">(</span><span class="n">kernel</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">ScaleKernel</span><span class="p">(</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">RBFKernel</span><span class="p">()),</span> <span class="c1"># gpytorch kernel</span>
+                           <span class="n">likelihood</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">likelihoods</span><span class="o">.</span><span class="n">GaussianLikelihood</span><span class="p">(),</span> <span class="c1"># gpytorch likelihood</span>
+                           <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+                           <span class="n">epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                           <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">,</span>
+                           <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+                           <span class="n">use_wandb</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">bbmm_gp</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">bbmm_gp_sol</span> <span class="o">=</span> <span class="n">bbmm_gp</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">bbmm_gp_sol</span><span class="p">,</span> <span class="s2">&quot;BBMM Gaussian Process Regressor&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_11_0.png" /></p>
+<h3 id="split-conformal-quantile-regression">Split Conformal Quantile Regression</h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.conformal.cqr</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConformalQuantileRegressor</span> 
+
+<span class="n">cqr</span> <span class="o">=</span> <span class="n">ConformalQuantileRegressor</span><span class="p">(</span><span class="n">hidden_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span> 
+                                 <span class="n">cal_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="c1"># Proportion of training data to use for conformal calibration</span>
+                                 <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
+                                 <span class="n">tau_lo</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Lower quantile the underlying regressor is trained for; can be tuned</span>
+                                 <span class="n">tau_hi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Upper quantile the underlying regressor is trained for; can be tuned </span>
+                                 <span class="n">dropout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Dropout probability in the underlying neural network (only during training)</span>
+                                 <span class="n">epochs</span><span class="o">=</span><span class="mi">2500</span><span class="p">,</span> 
+                                 <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> 
+                                 <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> 
+                                 <span class="n">use_wandb</span><span class="o">=</span><span class="kc">False</span> 
+                                 <span class="p">)</span>
+
+<span class="n">cqr</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">cqr_sol</span> <span class="o">=</span> <span class="n">cqr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">cqr_sol</span><span class="p">,</span> <span class="s2">&quot;Split Conformal Quantile Regression&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_13_0.png" /></p>
+<h3 id="k-fold-conformal-quantile-regression">K-fold Conformal Quantile Regression</h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.conformal.k_fold_cqr</span><span class="w"> </span><span class="kn">import</span> <span class="n">KFoldCQR</span>
+
+<span class="n">k_fold_cqr</span> <span class="o">=</span> <span class="n">KFoldCQR</span><span class="p">(</span>
+    <span class="n">n_estimators</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of models in the ensemble</span>
+    <span class="n">hidden_sizes</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
+    <span class="n">tau_lo</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Lower quantile the underlying regressor is trained for; can be tuned</span>
+    <span class="n">tau_hi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Upper quantile the underlying regressor is trained for; can be tuned </span>
+    <span class="n">dropout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">epochs</span><span class="o">=</span><span class="mi">2500</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="c1"># Experimental: number of parallel processes using joblib</span>
+    <span class="n">use_wandb</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">k_fold_cqr</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">k_fold_cqr_sol</span> <span class="o">=</span> <span class="n">k_fold_cqr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">k_fold_cqr_sol</span><span class="p">,</span> <span class="s2">&quot;K-Fold Conformal Quantile Regression&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_15_0.png" /></p>
+<h3 id="normalized-conformalens">Normalized ConformalEns</h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.conformal.conformal_ens</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConformalEnsRegressor</span>
+
+<span class="n">conformal_ens</span> <span class="o">=</span> <span class="n">ConformalEnsRegressor</span><span class="p">(</span>
+    <span class="n">n_estimators</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> 
+    <span class="n">hidden_sizes</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
+    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">cal_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">gamma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="c1"># Normalization constant added for stability; can be tuned</span>
+    <span class="n">dropout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+    <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">use_wandb</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">conformal_ens</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">conformal_ens_sol</span> <span class="o">=</span> <span class="n">conformal_ens</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">conformal_ens_sol</span><span class="p">,</span> <span class="s2">&quot;Normalized Conformal Ensemble&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_17_0.png" /></p>
+<h2 id="metrics">Metrics</h2>
+<p>Several metrics can be calculated from the predicted and true values on the test set. If just computing metrics for one model, see the previous example script for usage of the method: <code>compute_all_metrics</code>. Otherwise, to graphically compare the metrics of several models, use the method <code>plot_metrics_comparisons</code>. For details on each of the metrics, see the metrics example. </p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.utils.file_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.plotting.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_metrics_comparisons</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">style</span><span class="o">=</span><span class="s2">&quot;whitegrid&quot;</span><span class="p">,</span> <span class="n">font_scale</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">sol_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;MC Dropout&quot;</span><span class="p">:</span> <span class="n">dropout_sol</span><span class="p">,</span> 
+            <span class="s2">&quot;Deep Ensemble Regressor&quot;</span><span class="p">:</span> <span class="n">deep_ens_sol</span><span class="p">,</span> 
+            <span class="s2">&quot;Standard GP&quot;</span><span class="p">:</span> <span class="n">gp_sol</span><span class="p">,</span> 
+            <span class="s2">&quot;BBMM GP&quot;</span><span class="p">:</span> <span class="n">bbmm_gp_sol</span><span class="p">,</span> 
+            <span class="s2">&quot;Split CQR&quot;</span><span class="p">:</span> <span class="n">cqr_sol</span><span class="p">,</span> 
+            <span class="s2">&quot;K-fold-CQR&quot;</span><span class="p">:</span> <span class="n">k_fold_cqr_sol</span><span class="p">,</span> 
+            <span class="s2">&quot;Normalized Conformal Ens&quot;</span><span class="p">:</span> <span class="n">conformal_ens_sol</span>
+            <span class="p">}</span>
+
+<span class="n">plot_metrics_comparisons</span><span class="p">(</span><span class="n">sol_dict</span><span class="p">,</span> 
+                         <span class="n">y_test</span><span class="p">,</span> 
+                         <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
+                         <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
+                         <span class="n">save_dir</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span><span class="o">/</span><span class="s2">&quot;.uqregressors&quot;</span><span class="o">/</span><span class="s2">&quot;metrics_curve_tests&quot;</span><span class="p">,</span> 
+                         <span class="n">log_metrics</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># Which metrics to display on a log scale</span>
+                         <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;metrics_test.png&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_0.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\rmse_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\rmse_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_2.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\coverage_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\coverage_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_4.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\average_interval_width_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\average_interval_width_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_6.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\interval_score_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\interval_score_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_8.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\nll_gaussian_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\nll_gaussian_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_10.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\error_width_corr_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\error_width_corr_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_12.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_14.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_under_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_under_metrics_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_19_16.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\lowest_group_coverage_metrics_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\lowest_group_coverage_metrics_test.png
+
+
+
+
+
+WindowsPath('C:/Users/arsha/.uqregressors/metrics_curve_tests')
+</code></pre>
+<h2 id="visualization">Visualization</h2>
+<h3 id="calibration-curves">Calibration Curves</h3>
+<p>Generates a calibration curve for the model. This sweeps the predictions through a range of confidence levels and evaluates how close the coverage given by the predicted intervals is to the desired confidence level. The two methods useful here are <code>generate_cal_curve</code>, which outputs the data needed for plotting the calibration curve, and <code>plot_cal_curve</code>, which plots the calibration curve. </p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.plotting.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_cal_curve</span><span class="p">,</span> <span class="n">plot_cal_curve</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Generate data with generate_cal_curve. If true, refit will re-train the </span>
+<span class="sd">model for each confidence level (only necessary for quantile regressors)</span>
+
+<span class="sd">Returns desired coverage, empirical coverage, and average interval width.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">des_cov</span><span class="p">,</span> <span class="n">emp_cov</span><span class="p">,</span> <span class="n">avg_width</span> <span class="o">=</span> <span class="n">generate_cal_curve</span><span class="p">(</span><span class="n">dropout</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> 
+                                                 <span class="n">refit</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">X_train</span><span class="o">=</span><span class="n">X_train</span><span class="p">,</span> 
+                                                 <span class="n">y_train</span><span class="o">=</span><span class="n">y_train</span><span class="p">)</span>
+
+
+<span class="n">plot_cal_curve</span><span class="p">(</span><span class="n">des_cov</span><span class="p">,</span> 
+               <span class="n">emp_cov</span><span class="p">,</span> 
+               <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
+               <span class="n">save_dir</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span><span class="o">/</span><span class="s2">&quot;.uqregressors&quot;</span><span class="o">/</span><span class="s2">&quot;calibration_curve_tests&quot;</span><span class="p">,</span> 
+               <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;dropout_test.png&quot;</span><span class="p">,</span> 
+               <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Calibration Curve: Dropout&quot;</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp_zma25_5\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpkntl7um3\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp8w3s_uc5\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpjix8a44u\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpad5mm5tn\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpr79nkajn\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpxwxo8guq\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp0y07es5r\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp0u9sh1vx\models\MCDropoutRegressor_20250703_150234
+Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpl6g1sfq1\models\MCDropoutRegressor_20250703_150234
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_21_1.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
+Saved calibration curve to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
+
+
+
+
+
+WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests/plots/dropout_test.png')
+</code></pre>
+<h3 id="predicted-vs-true-values">Predicted vs. True Values</h3>
+<p>The method <code>plot_pred_vs_true</code> plots the predicted values against the true values in the test set, with the option to include the predicted confidence intervals.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.plotting.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_pred_vs_true</span>
+
+<span class="n">plot_pred_vs_true</span><span class="p">(</span><span class="o">*</span><span class="n">dropout_sol</span><span class="p">,</span> 
+                  <span class="n">y_test</span><span class="p">,</span> 
+                  <span class="n">samples</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="c1"># Number of points randomly subsampled for plotting</span>
+                  <span class="n">include_confidence</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Whether to include the confidence interval</span>
+                  <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
+                  <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Predicted vs Actual: Dropout&quot;</span><span class="p">,</span>  
+                  <span class="n">save_dir</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span><span class="o">/</span><span class="s2">&quot;.uqregressors&quot;</span><span class="o">/</span><span class="s2">&quot;calibration_curve_tests&quot;</span><span class="p">,</span> 
+                  <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;dropout_test.png&quot;</span><span class="p">,</span> 
+                  <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_23_0.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
+Saved calibration curve to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
+
+
+
+
+
+WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests/plots/dropout_test.png')
+</code></pre>
+<h2 id="hyperparameter-tuning">Hyperparameter Tuning</h2>
+<p>A simple example of using the <code>tune_hyperparams</code> method is used to tune the lower and upper quantiles of a split conformal quantile regressor using Bayesian Optimization. More detail on how to use the trial objects to suggest parameters for Bayesian Optimization is given in the <a href="https://optuna.org/#code_examples">Optuna documentation</a>. </p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.tuning.tuning</span><span class="w"> </span><span class="kn">import</span> <span class="n">tune_hyperparams</span><span class="p">,</span> <span class="n">interval_width</span>
+
+<span class="c1"># Use Optuna to suggest parameters for the upper and lower quantiles of CQR</span>
+<span class="n">param_space</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;tau_lo&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">trial</span><span class="p">:</span> <span class="n">trial</span><span class="o">.</span><span class="n">suggest_float</span><span class="p">(</span><span class="s2">&quot;tau_lo&quot;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="c1"># Parameter bounds</span>
+    <span class="s2">&quot;tau_hi&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">trial</span><span class="p">:</span> <span class="n">trial</span><span class="o">.</span><span class="n">suggest_float</span><span class="p">(</span><span class="s2">&quot;tau_hi&quot;</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># Run hyperparameter tuning study</span>
+<span class="n">opt_cqr</span><span class="p">,</span> <span class="n">opt_score</span><span class="p">,</span> <span class="n">study</span> <span class="o">=</span> <span class="n">tune_hyperparams</span><span class="p">(</span>
+                                            <span class="n">regressor</span><span class="o">=</span><span class="n">cqr</span><span class="p">,</span>
+                                            <span class="n">param_space</span><span class="o">=</span><span class="n">param_space</span><span class="p">,</span>
+                                            <span class="n">X</span><span class="o">=</span><span class="n">X_train</span><span class="p">,</span>
+                                            <span class="n">y</span><span class="o">=</span><span class="n">y_train</span><span class="p">,</span>
+                                            <span class="n">score_fn</span><span class="o">=</span><span class="n">interval_width</span><span class="p">,</span> <span class="c1"># Can use custom scoring functions</span>
+                                            <span class="n">greater_is_better</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Minimize score function</span>
+                                            <span class="n">n_trials</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                            <span class="n">n_splits</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="c1"># cross validation used if n_splits &gt; 1</span>
+                                            <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                            <span class="p">)</span>
+<span class="n">opt_cqr_sol</span> <span class="o">=</span> <span class="n">opt_cqr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+
+<span class="c1"># Plot predictions from the tuned method</span>
+<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">opt_cqr_sol</span><span class="p">,</span> <span class="s2">&quot;Tuned Quantile Split Conformal Quantile Regression&quot;</span><span class="p">)</span>
+
+<span class="c1"># Plot metrics comparisons between the tuned and untuned models</span>
+<span class="n">hyperparam_comparison_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;CQR_untuned&quot;</span><span class="p">:</span> <span class="n">cqr_sol</span><span class="p">,</span> 
+                              <span class="s2">&quot;CQR_tuned&quot;</span><span class="p">:</span> <span class="n">opt_cqr_sol</span><span class="p">}</span>
+
+<span class="n">plot_metrics_comparisons</span><span class="p">(</span><span class="n">hyperparam_comparison_dict</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
+                         <span class="n">save_dir</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span><span class="o">/</span><span class="s2">&quot;.uqregressors&quot;</span><span class="o">/</span><span class="s2">&quot;calibration_curve_tests&quot;</span><span class="p">,</span> 
+                         <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;dropout_test.png&quot;</span><span class="p">,</span> <span class="n">log_metrics</span><span class="o">=</span><span class="p">[],</span> 
+                         <span class="n">excluded_metrics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;rmse&quot;</span><span class="p">,</span> <span class="s2">&quot;interval_score&quot;</span><span class="p">,</span> <span class="s2">&quot;nll_gaussian&quot;</span><span class="p">,</span> 
+                                           <span class="s2">&quot;RMSCD_under&quot;</span><span class="p">,</span> <span class="s2">&quot;RMSCD&quot;</span><span class="p">,</span> <span class="s2">&quot;lowest_group_coverage&quot;</span><span class="p">,</span> 
+                                           <span class="s2">&quot;error_width_corr&quot;</span><span class="p">])</span>
+</code></pre></div>
+<pre><code>[I 2025-07-03 15:09:29,218] A new study created in memory with name: no-name-47ee4411-08dd-4d34-a2a5-392a43eee1a0
+[I 2025-07-03 15:10:23,735] Trial 0 finished with value: 0.21255050599575043 and parameters: {'tau_lo': 0.07702064489146865, 'tau_hi': 0.9532812424682986}. Best is trial 0 with value: 0.21255050599575043.
+[I 2025-07-03 15:11:18,085] Trial 1 finished with value: 0.17628514766693115 and parameters: {'tau_lo': 0.03544573536094887, 'tau_hi': 0.9619633081353718}. Best is trial 1 with value: 0.17628514766693115.
+[I 2025-07-03 15:12:16,919] Trial 2 finished with value: 0.2198190689086914 and parameters: {'tau_lo': 0.0671337467996006, 'tau_hi': 0.9106960103195387}. Best is trial 1 with value: 0.17628514766693115.
+[I 2025-07-03 15:13:15,684] Trial 3 finished with value: 0.18643641471862793 and parameters: {'tau_lo': 0.07271364248499564, 'tau_hi': 0.984949554237519}. Best is trial 1 with value: 0.17628514766693115.
+[I 2025-07-03 15:14:15,869] Trial 4 finished with value: 0.23922699689865112 and parameters: {'tau_lo': 0.09848472741635608, 'tau_hi': 0.9645779319660116}. Best is trial 1 with value: 0.17628514766693115.
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_25_1.png" /></p>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_25_2.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\coverage_dropout_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\coverage_dropout_test.png
+</code></pre>
+<p><img alt="png" src="../examples_sin_1d_files/examples_sin_1d_25_4.png" /></p>
+<pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\average_interval_width_dropout_test.png
+Saved model comparison to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\average_interval_width_dropout_test.png
+
+
+
+
+
+WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests')
+</code></pre>
+<p>For this simple example, hyperparameter tuning of the quantiles has resulted in slightly smaller average interval width while maintaining coverage (note that the optimization was not run to convergence)</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      
+    
+  </body>
+</html>
