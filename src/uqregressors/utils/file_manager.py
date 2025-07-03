@@ -61,8 +61,8 @@ class FileManager:
         base_dir (Path): The base directory as a Path object.
         model_dir (Path): The directory "models" within the base_dir, where models will be saved and loaded.
     """
-    def __init__(self, base_dir=None):
-        self.base_dir = Path(base_dir) or Path.home() / ".uqregressors"
+    def __init__(self, base_dir=Path.home() / ".uqregressors"):
+        self.base_dir = Path(base_dir)
         self.model_dir = self.base_dir / "models"
         self.model_dir.mkdir(parents=True, exist_ok=True)
 

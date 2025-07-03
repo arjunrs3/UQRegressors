@@ -2,6 +2,19 @@ import logging
 from pathlib import Path
 import os
 
+LOGGING_CONFIG = {
+    "print": True
+}
+
+def set_logging_config(print=True): 
+    """
+    Sets global logging printing configuration. 
+
+    Args: 
+        print (bool): If False, disables printing to the terminal for all future Logger instances
+    """
+    LOGGING_CONFIG["print"] = print
+
 try:
     import wandb
 
@@ -36,7 +49,7 @@ class Logger:
             self.logger = logging.getLogger(name or f"Logger-{os.getpid()}")
             self.logger.setLevel(logging.INFO)
 
-            if not self.logger.handlers:
+            if LOGGING_CONFIG["print"] and not self.logger.handlers:
                 ch = logging.StreamHandler()
                 formatter = logging.Formatter("[%(name)s] %(message)s")
                 ch.setFormatter(formatter)

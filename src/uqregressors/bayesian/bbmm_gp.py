@@ -101,6 +101,9 @@ class BBMM_GP:
         self.tuning_loggers = tuning_loggers 
         self.tuning_logs = None
 
+        self.train_X = None 
+        self.train_y = None
+
     def fit(self, X, y): 
         """
         Fits the GP model to training data.
@@ -111,6 +114,9 @@ class BBMM_GP:
         """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
         y_tensor = y_tensor.view(-1)
+
+        self.train_X = X_tensor 
+        self.train_y = y_tensor
 
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
@@ -226,7 +232,7 @@ class BBMM_GP:
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["model", "kernel", "likelihood", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
-                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "train_X", "train_y"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module, torch.Tensor))
         }
