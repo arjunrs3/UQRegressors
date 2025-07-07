@@ -95,6 +95,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         residuals (Tensor): The combined residuals on the calibration set. 
         conformal_width (Tensor): The width needed to conformalize the quantile regressor, q. 
         _loggers (list[Logger]): Training loggers for each ensemble member. 
+        fitted (bool): Whether fit has been successfully called. 
     """
     def __init__(self, 
                  name="Conformal_Ens_Regressor",
@@ -167,6 +168,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
+        self.fitted = False
 
     def _train_single_model(self, X_tensor, y_tensor, input_dim, train_idx, cal_idx, model_idx): 
         if self.random_seed is not None: 
@@ -257,7 +259,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.residuals = torch.abs(mean_cal_preds - y_tensor[cal_idx].squeeze())
     
         self.conformity_scores = self.residuals / (std_cal_preds + self.gamma)
-
+        self.fitted = True 
         return self 
     
     def predict(self, X): 
@@ -276,7 +278,10 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         !!! note
             If `requires_grad` is False, all returned arrays are NumPy arrays.
             Otherwise, they are PyTorch tensors with gradients.
-        """        
+        """    
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before predict().")
+            
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.scale_data: 
             X_tensor = self.input_scaler.transform(X_tensor)
@@ -324,6 +329,9 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         Args:
             path (str or Path): Directory to save model files.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before save().")
+        
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -331,7 +339,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["models", "residuals", "conformity_score", "conformity_scores", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
-                         "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+                         "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "fitted"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }

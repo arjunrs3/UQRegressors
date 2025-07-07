@@ -55,7 +55,8 @@ class BBMM_GP:
         tuning_loggers (List[Logger]): Optional list of loggers from hyperparameter tuning.
 
     Attributes: 
-        _loggers [list]: Logger of training loss
+        _loggers (list): Logger of training loss.
+        fitted (bool): Whether the fit method has been successfully called.
     """
     def __init__(self, 
                  name="BBMM_GP_Regressor",
@@ -103,6 +104,8 @@ class BBMM_GP:
 
         self.train_X = None 
         self.train_y = None
+
+        self.fitted = False
 
     def fit(self, X, y): 
         """
@@ -164,6 +167,7 @@ class BBMM_GP:
                 logger.log({"epoch": epoch, "train_loss": loss})
         
         self._loggers.append(logger)
+        self.fitted=True
 
     def predict(self, X):
         """
@@ -182,6 +186,9 @@ class BBMM_GP:
             If `requires_grad` is False, all returned arrays are NumPy arrays.
             Otherwise, they are PyTorch tensors with gradients.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before predict().")
+        
         X_tensor = validate_X_input(X, device=self.device, requires_grad=True)
         self.model.eval()
         self.likelihood.eval() 
@@ -225,6 +232,9 @@ class BBMM_GP:
         Args:
             path (Union[str, Path]): Path to save directory.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before save().")
+        
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -232,7 +242,7 @@ class BBMM_GP:
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["model", "kernel", "likelihood", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
-                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "train_X", "train_y"]
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "train_X", "train_y", "fitted"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module, torch.Tensor))
         }

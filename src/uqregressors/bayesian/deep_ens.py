@@ -99,6 +99,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         _loggers (list): Training loggers for each model.
         training_logs: Logs from training.
         tuning_logs: Logs from hyperparameter tuning.
+        fitted (bool): Whether fit has been successfully called
     """
     def __init__(
         self,
@@ -162,6 +163,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
+        self.fitted = False
 
     def nll_loss(self, preds, y): 
         """
@@ -268,6 +270,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
 
         self.models, self._loggers = zip(*results)
 
+        self.fitted = True
         return self
     
     def predict(self, X): 
@@ -287,6 +290,9 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             If `requires_grad` is False, all returned arrays are NumPy arrays.
             Otherwise, they are PyTorch tensors with gradients.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before predict().")
+
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.scale_data: 
             X_tensor = self.input_scaler.transform(X_tensor)
@@ -330,6 +336,9 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         Args:
             path (str or pathlib.Path): Directory path to save the model and metadata.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before save().")
+        
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -337,7 +346,8 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["models", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
-                         "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+                         "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", 
+                         "tuning_logs", "fitted"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }

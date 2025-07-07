@@ -3,7 +3,7 @@ import torch
 from sklearn.model_selection import train_test_split 
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
-from uqregressors.utils.validate_dataset import clean_dataset, validate_dataset
+from uqregressors.utils.data_loader import clean_dataset, validate_dataset
 from uqregressors.metrics.metrics import compute_all_metrics
 from uqregressors.utils.data_loader import load_unformatted_dataset
 from uqregressors.conformal.cqr import ConformalQuantileRegressor
@@ -75,6 +75,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dropout = MCDropoutRegressor(
         hidden_sizes = [50], 
         dropout = 0.05, 
+        tau=10,
         use_paper_weight_decay=True,
         alpha = 0.05, 
         n_samples = 100, 
@@ -154,17 +155,17 @@ if __name__ == "__main__":
     seed = 42
 
     models = {
-        "deep_ens": (deep_ens, 0.05),
-        "dropout": (dropout, 0.1),
-        "cqr": (cqr, 0.2),
-        "conformal_ens": (conformal_ens, 0.2),
-        "k_fold_cqr": (k_fold_cqr, 0.2),
+        #"deep_ens": (deep_ens, 0.05),
+        "dropout_new": (dropout, 0.1),
+        #"cqr": (cqr, 0.2),
+        #"conformal_ens": (conformal_ens, 0.2),
+        #"k_fold_cqr": (k_fold_cqr, 0.2),
     }
 
     for name, (model, test_size) in models.items(): 
        run_regressor_test(BASE_SAVE_DIR, model, seed, name, test_size=test_size)
        
-    print_results(BASE_SAVE_DIR / "cqr.pkl")
-    print_results(BASE_SAVE_DIR / "k_fold_cqr.pkl")
-    print_results(BASE_SAVE_DIR / "conformal_ens.pkl")
-    print_results(BASE_SAVE_DIR / "deep_ens.pkl")
+    #print_results(BASE_SAVE_DIR / "cqr.pkl")
+    #print_results(BASE_SAVE_DIR / "k_fold_cqr.pkl")
+    #print_results(BASE_SAVE_DIR / "conformal_ens.pkl")
+    #print_results(BASE_SAVE_DIR / "deep_ens.pkl")

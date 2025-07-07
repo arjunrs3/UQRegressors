@@ -1,5 +1,5 @@
 [project]
-name = "UQRegressors"
+name = "uqregressors"
 version = "1.0.0"
 description = "PyTorch-based regressors with uncertainty quantification and scikit-learn interface"
 readme = "README.md"
@@ -9,7 +9,7 @@ authors = [
   { name = "Arjun Shah", email = "arjunrs@stanford.edu" }
 ]
 Homepage = "https://github.com/arjunrs3/UQRegressors"
-Documentation = "https://arjunrs3.github.io/uqregressors/"
+Documentation = "https://arjunrs3.github.io/UQRegressors/"
 dependencies = [
   "torch",
   "numpy",

@@ -77,6 +77,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         alpha (float): Significance level (1 - confidence level) for prediction intervals.
         requires_grad (bool): Whether to track gradients in prediction output.
         activation_str (str): Activation function name (e.g., "ReLU", "Tanh").
+        prior_length_scale (float): Prior length scale for weight decay (1e-2 in paper implementation).
         n_samples (int): Number of stochastic forward passes for prediction.
         learning_rate (float): Learning rate for the optimizer.
         epochs (int): Number of training epochs.
@@ -102,14 +103,16 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         _loggers (Logger): Training logger.
         training_logs: Logs from training.
         tuning_logs: Logs from hyperparameter tuning.
+        fitted (bool): Whether fit has successfully been called.
     """
     def __init__(
         self,
         name="MC_Dropout_Regressor",
         hidden_sizes=[64, 64],
         dropout=0.1,
-        tau=1.0e-6,
+        tau=1.0e6,
         use_paper_weight_decay=True,
+        prior_length_scale=1e-2,
         alpha=0.1,
         requires_grad=False, 
         activation_str="ReLU",
@@ -137,6 +140,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.dropout = dropout
         self.tau = tau
         self.use_paper_weight_decay = use_paper_weight_decay
+        self.prior_length_scale = prior_length_scale
         self.alpha = alpha
         self.requires_grad = requires_grad
         self.activation_str = activation_str
@@ -167,6 +171,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.training_logs = None
         self.tuning_loggers = tuning_loggers 
         self.tuning_logs = None
+        self.fitted = False
 
     def fit(self, X, y): 
         """
@@ -175,9 +180,17 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         Args:
             X (array-like): Training features of shape (n_samples, n_features).
             y (array-like): Target values of shape (n_samples,).
+        Returns: 
+            (MCDropoutRegressor): Fitted model.
         """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
         input_dim = X_tensor.shape[1]
+        if self.use_paper_weight_decay: 
+            l = self.prior_length_scale 
+            N = len(X_tensor)
+            p = 1 - self.dropout 
+            weight_decay = (p * l ** 2) / (2 * N * self.tau)
+            self.optimizer_kwargs["weight_decay"] = weight_decay
         self.input_dim = input_dim
 
         if self.scale_data: 
@@ -186,6 +199,8 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
 
         model, logger = self._fit_single_model(X_tensor, y_tensor)
         self._loggers.append(logger)
+        self.fitted = True
+        return self 
 
     def _fit_single_model(self, X_tensor, y_tensor):
         if self.random_seed is not None: 
@@ -259,6 +274,9 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
             If `requires_grad` is False, all returned arrays are NumPy arrays.
             Otherwise, they are PyTorch tensors with gradients.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before predict().")
+
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
@@ -303,6 +321,9 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         Args:
             path (str or Path): Directory to save model components.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before save().")
+        
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -310,7 +331,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", "input_scaler", 
-                         "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+                         "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "fitted"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
@@ -400,27 +421,4 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
             model.tuning_logs = tuning_logs
         
         return model
-    
-    def _predictive_log_likelihood(self, X, y_true, tau):
-        self.model.train()
-
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
-        y_true = y_true.reshape(-1)
-        preds = []
-
-        with torch.no_grad():
-            for _ in range(self.n_samples):
-                pred = self.model(X_tensor).cpu().numpy().squeeze()
-                preds.append(pred)
-        preds = np.stack(preds, axis=0)  # Shape: (T, N)
-
-        mean_preds = preds.mean(axis=0)
-        var_preds = preds.var(axis=0) + (1 / tau)
-
-        log_likelihoods = (
-            -0.5 * np.log(2 * np.pi * var_preds)
-            - 0.5 * ((y_true - mean_preds) ** 2) / var_preds
-        )
-
-        return np.mean(log_likelihoods)
     

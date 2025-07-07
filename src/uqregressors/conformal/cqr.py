@@ -92,6 +92,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         residuals (Tensor): The residuals on the calibration set. 
         conformal_width (Tensor): The width needed to conformalize the quantile regressor, q. 
         _loggers (list[Logger]): Training loggers for each ensemble member. 
+        fitted (bool): Whether fit has been successfully called. 
     """
     def __init__(
             self, 
@@ -161,6 +162,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
+        self.fitted = False
 
     def quantile_loss(self, preds, y): 
         """
@@ -245,12 +247,14 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             if epoch % (self.epochs / 20) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
+        self.model.eval()
         oof_preds = self.model(X_cal)
         loss_matrix = (oof_preds - y_cal) * torch.tensor([1, -1], device=self.device)
         self.residuals = torch.max(loss_matrix, dim=1).values
 
         logger.finish()
         self._loggers.append(logger)
+        self.fitted = True
         return self
 
     def predict(self, X): 
@@ -270,6 +274,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             If `requires_grad` is False, all returned arrays are NumPy arrays.
             Otherwise, they are PyTorch tensors with gradients.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before predict().")
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         self.model.eval()
 
@@ -316,13 +322,16 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         Args:
             path (str or Path): Directory to save model components.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before save().")
+        
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["model", "residuals", "conformal_width", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", "input_scaler", "output_scaler", "quantiles", 
-                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "fitted"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }

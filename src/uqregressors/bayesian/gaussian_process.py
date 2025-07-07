@@ -26,6 +26,7 @@ class GPRegressor:
         alpha (float): Significance level for confidence intervals (e.g., 0.1 for 90% CI).
         gp_kwargs (dict): Additional keyword arguments for the GaussianProcessRegressor.
         model (GaussianProcessRegressor): Fitted scikit-learn GP model.
+        fitted (bool): Whether fit has been successfully called. 
     """
     def __init__(self, name="GP_Regressor", kernel = RBF(), 
                  alpha=0.1, 
@@ -36,6 +37,7 @@ class GPRegressor:
         self.alpha = alpha 
         self.gp_kwargs = gp_kwargs or {}
         self.model = None
+        self.fitted = False
 
     def fit(self, X, y): 
         """
@@ -44,10 +46,14 @@ class GPRegressor:
         Args:
             X (np.ndarray): Feature matrix of shape (n_samples, n_features).
             y (np.ndarray): Target values of shape (n_samples,).
+        Returns: 
+            (GPRegressor): Fitted model.
         """
         model = GaussianProcessRegressor(kernel=self.kernel, **self.gp_kwargs)
         model.fit(X, y)
         self.model = model
+        self.fitted = True
+        return self 
 
     def predict(self, X):
         """
@@ -66,6 +72,9 @@ class GPRegressor:
             If `requires_grad` is False, all returned arrays are NumPy arrays.
             Otherwise, they are PyTorch tensors with gradients.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before predict().")
+        
         preds, std = self.model.predict(X, return_std=True)
         z_score = st.norm.ppf(1 - self.alpha / 2)
         mean = preds
@@ -80,12 +89,15 @@ class GPRegressor:
         Args:
             path (Union[str, Path]): Directory where model and config will be saved.
         """
+        if not self.fitted: 
+            raise ValueError("Model not yet fit. Please call fit() before save().")
+        
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True) 
 
         config = {
             k: v for k, v in self.__dict__.items()
-            if k not in ["kernel", "model"]
+            if k not in ["kernel", "model", "fitted"]
             and not callable(v)
             and not isinstance(v, ())
         }

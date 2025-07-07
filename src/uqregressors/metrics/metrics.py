@@ -22,10 +22,10 @@ def validate_inputs(mean, lower, upper, y_true, alpha=0.5):
             x = x.flatten()
         return x
 
-    mean = to_1d_numpy(mean)
-    lower = to_1d_numpy(lower)
-    upper = to_1d_numpy(upper)
-    y_true = to_1d_numpy(y_true)
+    mean = to_1d_numpy(mean).astype(np.float64)
+    lower = to_1d_numpy(lower).astype(np.float64)
+    upper = to_1d_numpy(upper).astype(np.float64)
+    y_true = to_1d_numpy(y_true).astype(np.float64)
 
     if not (0 < float(alpha) < 1):
         raise ValueError(f"alpha must be in (0, 1), got {alpha}")

@@ -48,7 +48,7 @@ def log_likelihood(estimator, X, y):
     std = (upper - lower) / (2 * z)
     std = np.clip(std, 1e-6, None)
 
-    log_likelihoods = -0.5 * np.log(2 * np.pi * std**2) - 0.5 * ((y - mean) / std) ** 2
+    log_likelihoods = -0.5 * np.log(2 * np.pi * std**2) - 0.5 * ((y.ravel() - mean) / std) ** 2
     return np.mean(log_likelihoods)
 
 def tune_hyperparams(
@@ -58,9 +58,11 @@ def tune_hyperparams(
     y,
     score_fn,
     greater_is_better,
+    initial_params = None,
     n_trials=20,
     n_splits=3,
     random_state=42,
+    test_size=0.2,
     verbose=True,
 ):
     """
@@ -75,9 +77,11 @@ def tune_hyperparams(
         y (Union[torch.Tensor, np.ndarray, pd.DataFrame, pd.Series]): Training targets.
         score_fn (Callable(estimator, X_val, y_val) → float): Scoring function.
         greater_is_better (bool): Whether score_fn should be maximized (True) or minimized (False).
+        initial_params (dict): A dictionary of the initial params to start with. Otherwise, chosen by Optuna algorithm.
         n_trials (int): Number of Optuna trials.
         n_splits (int): If >1, uses KFold CV; otherwise single train/val split.
         random_state (int): For reproducibility.
+        test_size (float): Proportion of training examples to allocate to validation set; between 0 and 1. 
         verbose (bool): Print status messages.
     
     Returns:
@@ -96,12 +100,16 @@ def tune_hyperparams(
         if n_splits == 1:
             # Single train/val split
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=0.2, random_state=random_state
+                X, y, test_size=test_size, random_state=random_state
             )
 
-            with tempfile.TemporaryDirectory() as tmpdir: 
-                regressor.save(tmpdir)
-                estimator = regressor.__class__.load(tmpdir)
+            # Copy the regressor if it has already been fit
+            if regressor.fitted: 
+                with tempfile.TemporaryDirectory() as tmpdir: 
+                    regressor.save(tmpdir)
+                    estimator = regressor.__class__.load(tmpdir)
+            else: 
+                estimator = regressor
 
             for param_name, param_value in trial_params.items():
                 setattr(estimator, param_name, param_value)
@@ -116,9 +124,14 @@ def tune_hyperparams(
                 X_train, X_val = X[train_idx], X[val_idx]
                 y_train, y_val = y[train_idx], y[val_idx]
 
-                with tempfile.TemporaryDirectory() as tmpdir: 
-                    regressor.save(tmpdir)
-                    estimator = regressor.__class__.load(tmpdir)
+                # Copy the regressor if it has already been fit 
+                if regressor.fitted: 
+                    with tempfile.TemporaryDirectory() as tmpdir: 
+                        regressor.save(tmpdir)
+                        estimator = regressor.__class__.load(tmpdir)
+
+                else: 
+                    estimator = regressor
                 
                 for param_name, param_value in trial_params.items():
                     setattr(estimator, param_name, param_value)
@@ -135,7 +148,11 @@ def tune_hyperparams(
         return mean_score
 
     study = optuna.create_study(direction=direction)
-    study.optimize(objective, n_trials=n_trials)
+
+    if initial_params is not None: 
+        study.enqueue_trial(initial_params)
+
+    study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
     # Re-train on full data with best hyperparameters
     best_params = study.best_params
