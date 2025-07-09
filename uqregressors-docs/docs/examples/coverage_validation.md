@@ -30,27 +30,6 @@ def process_data(X, y, train_size, random_state=None):
 
     return X_train, X_test, y_train, y_test
 
-def recombine_data(X_calibrate, X_test, y_calibrate, y_test):
-    """
-    Combines and then splits calibration and testing data for conformal prediction validation  
-
-    Parameters:
-    ----------
-    X_calibrate: array 
-        The inputs of the calibration dataset 
-    X_test: array 
-        The inputs of the test dataset 
-    y_calibrate: array 
-        The outputs of the calibration dataset 
-    y_test: array 
-        The outputs of the test dataset 
-    """
-    test_size = y_test.size / (y_test.size + y_calibrate.size)
-    combined_X = np.append(X_calibrate, X_test, axis=0)
-    combined_y = np.append(y_calibrate, y_test)
-    new_X_calibrate, new_X_test, new_y_calibrate, new_y_test = train_test_split(combined_X, combined_y, test_size=test_size)
-    return new_X_calibrate, new_X_test, new_y_calibrate, new_y_test 
-
 def generate_unvaried_data(n):
     """ 
     Generates synthetic data with no variance according to the sine function described above 
@@ -104,8 +83,8 @@ def plot_data(X, y, ax, scatter = False, **kwargs):
     ax.set_ylabel("y")
 
 fig, ax = plt.subplots() 
-fun_x, fun_y = generate_unvaried_data(100)
-x,y = generate_varied_data(1000)
+fun_x, fun_y = generate_unvaried_data(200)
+x,y = generate_varied_data(200)
 X_train, X_test, y_train, y_test = process_data(x, y, 0.25)
 plot_data(X_train, y_train, ax, scatter=True, color='blue', alpha = 0.3, label="Train", s=8)
 plot_data(X_test, y_test, ax, scatter=True, color='orange', alpha = 0.3, label="Test", s=8)
@@ -123,7 +102,7 @@ plt.show()
 
 
 ```python
-from uqregressors.conformal.conformal_split import ConformalQuantileRegressor
+from uqregressors.conformal.cqr import ConformalQuantileRegressor
 from uqregressors.metrics.metrics import coverage
 
 def run_prediction_trials(model, alpha, num_trials, dataset_size, train_size, calibrate_size=0):

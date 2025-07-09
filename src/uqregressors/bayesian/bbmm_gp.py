@@ -242,7 +242,7 @@ class BBMM_GP:
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["model", "kernel", "likelihood", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
-                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "train_X", "train_y", "fitted"]
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "train_X", "train_y"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module, torch.Tensor))
         }
@@ -288,6 +288,7 @@ class BBMM_GP:
 
         config.pop("optimizer", None)
         config.pop("scheduler", None)
+        fitted = config.pop("fitted", False)
         model = cls(**config)
 
         with open(path / "extras.pkl", 'rb') as f: 
@@ -301,6 +302,7 @@ class BBMM_GP:
         model.optimizer_kwargs = optimizer_kwargs 
         model.scheduler_cls = scheduler_cls 
         model.scheduler_kwargs = scheduler_kwargs
+        model.fitted = fitted
 
         if load_logs: 
             logs_path = path / "logs"

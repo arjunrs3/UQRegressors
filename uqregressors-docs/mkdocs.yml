@@ -5,6 +5,8 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.superfences
   - mdx_math
+  - pymdownx.arithmatex:
+      generic: true
 
 theme:
   name: material
@@ -20,6 +22,7 @@ plugins:
           paths: ["../src"]
   - mkdocs-jupyter
 
+
 extra_javascript:
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML
   
@@ -27,7 +30,13 @@ extra_javascript:
 nav:
   - Home: index.md
   - Examples: 
+    - Quickstart: examples/quickstart.md
     - Getting Started: examples/getting_started.md
+    - Metrics: examples/metrics.md
+    - Saving and Loading Models: examples/saving_models.md
+    - Validation: examples/validation.md
+
+  - Regressor Details: regressor_details.md
   - API Reference:
     - Bayesian:
       - Deep Ensembles: api/Bayesian/deep_ens.md

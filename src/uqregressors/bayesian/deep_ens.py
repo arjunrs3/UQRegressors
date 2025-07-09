@@ -347,7 +347,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             k: v for k, v in self.__dict__.items()
             if k not in ["models", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
                          "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", 
-                         "tuning_logs", "fitted"]
+                         "tuning_logs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
@@ -400,6 +400,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         config.pop("output_scaler", None)
 
         input_dim = config.pop("input_dim", None)
+        fitted = config.pop("fitted", False)
         model = cls(**config)
 
         # Recreate models
@@ -420,6 +421,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         model.scheduler_kwargs = scheduler_kwargs
         model.input_scaler = input_scaler 
         model.output_scaler = output_scaler
+        model.fitted = fitted
 
         if load_logs: 
             logs_path = path / "logs"

@@ -97,7 +97,7 @@ class GPRegressor:
 
         config = {
             k: v for k, v in self.__dict__.items()
-            if k not in ["kernel", "model", "fitted"]
+            if k not in ["kernel", "model"]
             and not callable(v)
             and not isinstance(v, ())
         }

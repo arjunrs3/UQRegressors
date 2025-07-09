@@ -228,4 +228,4 @@ def plot_metrics_comparisons(solution_dict, y_test, alpha, excluded_metrics=[], 
     if save_dir is not None: 
         return save_dir
     else: 
-        return save_path
+        return None
