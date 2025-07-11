@@ -90,18 +90,6 @@ https://arjunrs3.github.io/UQRegressors/
 
 ---
 
-## Testing
-
-Clone the repository and run:
-
-```bash
-pip install hatch
-hatch env create
-pip install pytest
-hatch run pytest -v
-```
----
-
 ## Contributing
 
 Contributions, issues, and feature requests are welcome! Please:
