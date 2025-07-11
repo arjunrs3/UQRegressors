@@ -35,6 +35,7 @@ nav:
     - Metrics: examples/metrics.md
     - Saving and Loading Models: examples/saving_models.md
     - Validation: examples/validation.md
+    - Validating Coverage: examples/conformal_coverage_validation.md
 
   - Regressor Details: regressor_details.md
   - API Reference:

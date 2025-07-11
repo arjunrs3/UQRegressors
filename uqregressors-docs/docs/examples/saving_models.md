@@ -3,14 +3,15 @@
 This notebook demonstrates how to train a regression model, save the trained model and associated data to disk, and then load them back for further use or evaluation.
 
 The workflow includes:
-- Generating synthetic data
-- Training a Deep Ensemble regressor
-- Saving the model, metrics, and datasets using the `FileManager` utility
-- Loading the saved model and data
-- Verifying that predictions from the loaded model match the original
+
+1. Generating synthetic data
+2. Training a Deep Ensemble regressor
+3. Saving the model, metrics, and datasets using the `FileManager` utility
+4. Loading the saved model and data
+5. Verifying that predictions from the loaded model match the original
 
 
-## 1. Import Required Libraries
+## Import Required Libraries
 
 We import the necessary modules from UQRegressors and scikit-learn. The `FileManager` utility handles saving and loading models and data, while `DeepEnsembleRegressor` is used as the example model.
 
@@ -25,7 +26,7 @@ from uqregressors.utils.logging import set_logging_config
 set_logging_config(print=False)
 ```
 
-## 2. Generate Synthetic Data
+## Generate Synthetic Data
 
 For demonstration purposes, we generate a simple synthetic regression dataset. The target variable is a nonlinear function of the features, with added Gaussian noise.
 
@@ -42,7 +43,7 @@ X, y = generate_data()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 ```
 
-## 3. Train a Deep Ensemble Regressor
+## Train a Deep Ensemble Regressor
 
 We instantiate and train a `DeepEnsembleRegressor` on the training data. This model is an ensemble of neural networks, which provides both predictions and uncertainty estimates. For simplicity, we use a small number of epochs.
 
@@ -61,7 +62,7 @@ print(f"Test MSE: {mse:.4f}")
     Test MSE: 1.5120
     
 
-## 4. Save the Model, Metrics, and Datasets
+## Save the Model, Metrics, and Datasets
 
 We use the `FileManager` utility to save the trained model, evaluation metrics, and the train/test datasets to disk. This makes it easy to reload the model and data later for reproducibility or further analysis.
 
@@ -86,7 +87,7 @@ save_path = fm.save_model(
     Model and additional artifacts saved to: C:\Users\arsha\.uqregressors\models\DeepEnsembleRegressor_20250709_115438
     
 
-## 5. Load the Model, Metrics, and Datasets
+## Load the Model, Metrics, and Datasets
 
 We demonstrate how to load the saved model, metrics, and datasets using the `FileManager`. This allows you to resume work, evaluate, or make predictions without retraining.
 
@@ -104,7 +105,7 @@ mse_loaded = load_dict["metrics"]["mse"]
       m.load_state_dict(torch.load(path / f"model_{i}.pt", map_location=device))
     
 
-## 6. Predict with the Loaded Model and Verify Results
+## Predict with the Loaded Model and Verify Results
 
 Finally, we use the loaded model to make predictions on the loaded test set and verify that the mean squared error matches the value saved earlier. This confirms that the model and data were saved and loaded correctly.
 

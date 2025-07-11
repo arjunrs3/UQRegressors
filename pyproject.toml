@@ -11,7 +11,6 @@ authors = [
 Homepage = "https://github.com/arjunrs3/UQRegressors"
 Documentation = "https://arjunrs3.github.io/UQRegressors/"
 dependencies = [
-  "torch",
   "numpy",
   "scikit-learn",
   "matplotlib", 

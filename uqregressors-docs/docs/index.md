@@ -49,3 +49,4 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 For other versions or platforms, check the [official PyTorch installation page](https://pytorch.org/get-started/locally/)
 
 ## What Next? 
+To look more into the capabilities of UQRegressors, look at the Examples, particularly the getting started example. For notes on the types of regressors which were implemented, check the Regressor Details section. For detailed documentation on functions and how to use UQRegressors, explore the API Reference. For any other questions, email arjunrs@stanford.edu. 

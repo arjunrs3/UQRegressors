@@ -47,7 +47,13 @@ UQRegressors requires **PyTorch**, which you should install according to your se
 ```python
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.tuning.tuning import tune_hyperparams, interval_width
-from uqregressors.plotting import plot_uncertainty_results
+from uqregressors.plotting.plotting import plot_pred_vs_true
+
+# Define a dataset
+X_train = np.linspace(0, 1, 5)
+X_test = np.linspace(0, 1, 40)
+y_train = np.sin(2 * np.pi * X_train)
+y_test = np.sin(2 * np.pi * X_test)
 
 # Train an MC‑Dropout regressor
 reg = MCDropoutRegressor(epochs=50, random_seed=42)
@@ -55,7 +61,7 @@ reg.fit(X_train, y_train)
 mean, lower, upper = reg.predict(X_test)
 
 # Visualize results
-plot_uncertainty_results(mean, lower, upper, model_name="MC‑Dropout")
+plot_pred_vs_true(mean, lower, upper, y_test, show=True, title="MC‑Dropout")
 
 # Hyperparameter tuning example (e.g., tuning CQR)
 from uqregressors.conformal.cqr import ConformalQuantileRegressor
@@ -72,8 +78,15 @@ opt_cqr, best_score, study = tune_hyperparams(
     n_splits=3
 )
 mean_t, lo_t, hi_t = opt_cqr.predict(X_test)
-plot_uncertainty_results(mean_t, lo_t, hi_t, model_name="Tuned CQR")
+plot_pred_vs_true(mean_t, lo_t, hi_t, y_test, show=True, title="Tuned CQR")
 ```
+
+---
+
+## Documentation
+
+See the complete API Documentation with complete examples:  
+https://arjunrs3.github.io/UQRegressors/
 
 ---
 
@@ -87,14 +100,6 @@ hatch env create
 pip install pytest
 hatch run pytest -v
 ```
-
----
-
-## Documentation
-
-See the complete API Documentation with complete examples:  
-https://arjunrs3.github.io/UQRegressors/
-
 ---
 
 ## Contributing

@@ -2,6 +2,14 @@
 
 This notebook provides a fast introduction to the key features of UQRegressors for uncertainty-aware regression. In just a few cells, you'll see how to fit a model, make predictions with uncertainty, and visualize the results.
 
+There are five main capabilities of UQRegessors: 
+
+1. **Dataset** loading and validation 
+2. **Regression** using models of various types created with UQ capability
+3. **Hyperparameter Tuning** using bayesian optimization (wrapper around Optuna)
+4. **Metrics** for evaluating goodness of fit and quality of uncertainty intervals
+5. **Visualization** of metrics, goodness of fit, and quality of uncertainty intervals
+
 
 ```python
 # 1. Import UQRegressors
