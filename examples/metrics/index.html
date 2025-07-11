@@ -1,0 +1,1464 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../getting_started/">
+      
+      
+        <link rel="next" href="../saving_models/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+    
+    
+      
+        <title>Metrics - UQregressors</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
+      
+      
+  
+  
+    
+    
+  
+  
+  <style>:root{--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M13%2014h-2V9h2m0%209h-2v-2h2M1%2021h22L12%202z%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#uncertainty-quantification-metrics-demo" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="UQregressors" class="md-header__button md-logo" aria-label="UQregressors" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            UQregressors
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Metrics
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="UQregressors" class="md-nav__button md-logo" aria-label="UQregressors" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    UQregressors
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting_started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Metrics
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Metrics
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#root-mean-squared-error-rmse" class="md-nav__link">
+    <span class="md-ellipsis">
+      Root Mean Squared Error (RMSE)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coverage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#average-interval-width" class="md-nav__link">
+    <span class="md-ellipsis">
+      Average Interval Width
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interval-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interval Score
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#negative-log-likelihood-nll" class="md-nav__link">
+    <span class="md-ellipsis">
+      Negative Log Likelihood (NLL)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-width-correlation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Width Correlation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#group-conditional-coverage-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Group Conditional Coverage Metrics
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-heteroskedastic-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Heteroskedastic Noise
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analysis-of-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analysis of results
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../saving_models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Saving and Loading Models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../conformal_coverage_validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validating Coverage
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../regressor_details/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Regressor Details
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_1" id="__nav_4_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Bayesian
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_1">
+            <span class="md-nav__icon md-icon"></span>
+            Bayesian
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/deep_ens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Deep Ensembles
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/dropout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dropout
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/gp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Gaussian Processes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Bayesian/bbmm_gp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Gaussian Process (Black Box Matrix-Matrix Inference)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_2" id="__nav_4_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Conformal
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Conformal
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Conformal/cqr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Conformal Quantile Regression
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Conformal/k_fold_cqr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    K-Fold Conformal Quantile Regression
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Conformal/conformal_ens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Normalized Conformal Ensemble
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Metrics
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tuning
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/plotting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Plotting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Utils
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
+            <span class="md-nav__icon md-icon"></span>
+            Utils
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/activations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Activations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/data_loader/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Data Loader
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/file_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File Manager
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Logging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/Utils/torch_sklearn_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Torch Sklearn Utils
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#root-mean-squared-error-rmse" class="md-nav__link">
+    <span class="md-ellipsis">
+      Root Mean Squared Error (RMSE)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coverage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#average-interval-width" class="md-nav__link">
+    <span class="md-ellipsis">
+      Average Interval Width
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interval-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interval Score
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#negative-log-likelihood-nll" class="md-nav__link">
+    <span class="md-ellipsis">
+      Negative Log Likelihood (NLL)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-width-correlation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Width Correlation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#group-conditional-coverage-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Group Conditional Coverage Metrics
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-heteroskedastic-noise" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: Heteroskedastic Noise
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analysis-of-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analysis of results
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="uncertainty-quantification-metrics-demo">Uncertainty Quantification Metrics Demo</h1>
+<p>This notebook demonstrates and explains the most important metrics for evaluating regression models with uncertainty intervals. Each metric is defined mathematically and illustrated with a simple example.</p>
+<h2 id="root-mean-squared-error-rmse">Root Mean Squared Error (RMSE)</h2>
+<p>The Root Mean Squared Error (RMSE) measures the average magnitude of the errors between predicted means and true values. It is a standard metric for regression accuracy.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[
+\mathrm{RMSE} = \sqrt{\frac{1}{n} \sum_{i=1}^n (\hat{y}_i - y_i)^2}
+\]</div>
+<p>where <span class="arithmatex">\(\hat{y}_i\)</span> is the predicted mean and <span class="arithmatex">\(y_i\)</span> is the true value.</p>
+<p><strong>Interpretation:</strong> Lower RMSE indicates better point prediction accuracy.</p>
+<h2 id="coverage">Coverage</h2>
+<p>Coverage measures the proportion of true values that fall within the predicted uncertainty intervals. It is a key metric for interval calibration.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[
+\mathrm{Coverage} = \frac{1}{n} \sum_{i=1}^n \mathbb{I}\{l_i \leq y_i \leq u_i\}
+\]</div>
+<p>where <span class="arithmatex">\(l_i\)</span> and <span class="arithmatex">\(u_i\)</span> are the lower and upper bounds of the prediction interval, and <span class="arithmatex">\(\mathbb{I}\)</span> is the indicator function.</p>
+<p><strong>Interpretation:</strong> For a nominal <span class="arithmatex">\(1-\alpha\)</span> confidence level, coverage should be close to <span class="arithmatex">\(1-\alpha\)</span>.</p>
+<h2 id="average-interval-width">Average Interval Width</h2>
+<p>The average interval width measures the mean width of the predicted uncertainty intervals.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[
+\mathrm{Average\ Interval\ Width} = \frac{1}{n} \sum_{i=1}^n (u_i - l_i)
+\]</div>
+<p>where <span class="arithmatex">\(u_i\)</span> and <span class="arithmatex">\(l_i\)</span> are the upper and lower bounds of the prediction interval.</p>
+<p><strong>Interpretation:</strong> Lower interval width is better if coverage is maintained, as it indicates more precise uncertainty estimates.</p>
+<h2 id="interval-score">Interval Score</h2>
+<p>The interval score is a proper scoring rule for evaluating prediction intervals. It penalizes both the width of the interval and whether the true value falls outside the interval.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[
+\mathrm{Interval\ Score}_i = (u_i - l_i) + \frac{2}{\alpha}(l_i - y_i)\mathbb{I}\{y_i &lt; l_i\} + \frac{2}{\alpha}(y_i - u_i)\mathbb{I}\{y_i &gt; u_i\}
+\]</div>
+<p>where <span class="arithmatex">\(u_i\)</span> and <span class="arithmatex">\(l_i\)</span> are the upper and lower bounds, <span class="arithmatex">\(y_i\)</span> is the true value, <span class="arithmatex">\(\alpha\)</span> is the miscoverage rate, and <span class="arithmatex">\(\mathbb{I}\)</span> is the indicator function.</p>
+<p><strong>Interpretation:</strong> Lower interval score is better. It rewards narrow intervals that contain the true value and penalizes intervals that miss the true value.</p>
+<h2 id="negative-log-likelihood-nll">Negative Log Likelihood (NLL)</h2>
+<p>The negative log likelihood (NLL) measures how well a probabilistic model predicts the observed data, assuming a Gaussian distribution for the predictions.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[
+\mathrm{NLL} = \frac{1}{n} \sum_{i=1}^n \left[ \frac{1}{2} \log(2\pi \sigma_i^2) + \frac{(y_i - \mu_i)^2}{2\sigma_i^2} \right]
+\]</div>
+<p>where <span class="arithmatex">\(\mu_i\)</span> is the predicted mean, <span class="arithmatex">\(\sigma_i^2\)</span> is the predicted variance, and <span class="arithmatex">\(y_i\)</span> is the true value.</p>
+<p><strong>Interpretation:</strong> Lower NLL indicates better probabilistic predictions.</p>
+<h2 id="error-width-correlation">Error Width Correlation</h2>
+<p>The error width correlation is the Pearson correlation coefficient between the absolute residuals and the predicted interval widths. It measures how well the predicted uncertainty adapts to the actual errors.</p>
+<p><strong>Formula:</strong></p>
+<div class="arithmatex">\[
+\mathrm{Corr}(|y_i - \hat{y}_i|, u_i - l_i)
+\]</div>
+<p>where <span class="arithmatex">\(|y_i - \hat{y}_i|\)</span> is the absolute error and <span class="arithmatex">\(u_i - l_i\)</span> is the predicted interval width.</p>
+<p>The Pearson correlation coefficient between two variables <span class="arithmatex">\(X\)</span> and <span class="arithmatex">\(Y\)</span> is defined as:</p>
+<div class="arithmatex">\[
+\rho_{X,Y} = \frac{\sum_{i=1}^n (X_i - \bar{X})(Y_i - \bar{Y})}{\sqrt{\sum_{i=1}^n (X_i - \bar{X})^2} \sqrt{\sum_{i=1}^n (Y_i - \bar{Y})^2}}
+\]</div>
+<p><strong>Interpretation:</strong>
+- A value near 1 means the model's uncertainty intervals adapt well to the actual errors (good calibration).
+- A value near 0 means little relationship between predicted uncertainty and actual error.</p>
+<h2 id="group-conditional-coverage-metrics">Group Conditional Coverage Metrics</h2>
+<p>These metrics evaluate how well the model's uncertainty intervals are calibrated across different regions of the data, by dividing the data into bins (groups) and computing coverage within each bin.</p>
+<p><strong>Root Mean Square Coverage Deviation (RMSCD):</strong>
+- RMSCD measures the root mean square deviation between the empirical coverage in each bin and the nominal coverage <span class="arithmatex">\((1-\alpha)\)</span>.
+- Lower RMSCD means coverage is more uniform across all bins (better conditional calibration).
+- <strong>Formula:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+  \mathrm{RMSCD} = \sqrt{\frac{1}{B} \sum_{b=1}^B (\hat{C}_b - (1-\alpha))^2}
+  </script>
+</p>
+<p>where <span class="arithmatex">\(\hat{C}_b\)</span> is the empirical coverage in bin <span class="arithmatex">\(b\)</span>, and <span class="arithmatex">\(B\)</span> is the number of bins.</p>
+<p><strong>RMSCD_under:</strong>
+- RMSCD_under is the same as RMSCD, but only computed over bins where the empirical coverage is <em>below</em> the nominal coverage <span class="arithmatex">\((1-\alpha)\)</span>.
+- This highlights regions where the model is under-covering (intervals are too narrow).
+- <strong>Formula:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+  \mathrm{RMSCD}_{\text{under}} = \sqrt{\frac{1}{|U|} \sum_{b \in U} (\hat{C}_b - (1-\alpha))^2}
+  </script>
+</p>
+<p>where <span class="arithmatex">\(U\)</span> is the set of bins with <span class="arithmatex">\(\hat{C}_b &lt; 1-\alpha\)</span>.</p>
+<p><strong>Lowest Group Coverage:</strong>
+- The lowest group coverage is the minimum empirical coverage across all bins.
+- This metric identifies the worst-case region in terms of coverage.
+- <strong>Formula:</strong></p>
+<p>
+<script type="math/tex; mode=display">
+  \min_b \hat{C}_b
+  </script>
+</p>
+<p>where <span class="arithmatex">\(\hat{C}_b\)</span> is the empirical coverage in bin <span class="arithmatex">\(b\)</span>.</p>
+<h2 id="example-heteroskedastic-noise">Example: Heteroskedastic Noise</h2>
+<p>We generate a simple sine wave with Heteroskedastic noise, and demonstrate how the metrics change when using a constant as opposed to adaptive method of uncertainty quantification. </p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Example: Generate synthetic regression data (sine wave with heteroskedastic noise) and prediction intervals</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">n</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">X</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">n</span><span class="p">)</span>
+
+<span class="c1"># Simulate predictions (mean is noiseless sine)</span>
+<span class="n">mean_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">X</span><span class="p">)</span>
+
+<span class="c1"># --- Constant interval ---</span>
+<span class="c1"># Use a fixed width chosen to achieve ~90% coverage</span>
+<span class="n">const_width</span> <span class="o">=</span> <span class="mf">2.0</span>  <span class="c1"># initial guess, will calibrate below</span>
+<span class="n">lower_const</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">-</span> <span class="n">const_width</span> <span class="o">/</span> <span class="mi">2</span>
+<span class="n">upper_const</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">+</span> <span class="n">const_width</span> <span class="o">/</span> <span class="mi">2</span>
+
+<span class="c1"># --- Adaptive interval ---</span>
+<span class="c1"># Make interval width proportional to noise std (unknown in practice, but for demo)</span>
+<span class="n">noise_std</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">X</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="n">base_width</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="mf">1.645</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">noise_std</span><span class="p">)</span>  <span class="c1"># scale to match nominal 90% coverage</span>
+<span class="n">width_adapt</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="mf">1.645</span> <span class="o">*</span> <span class="n">noise_std</span>
+<span class="n">lower_adapt</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">-</span> <span class="n">width_adapt</span> <span class="o">/</span> <span class="mi">2</span>
+<span class="n">upper_adapt</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">+</span> <span class="n">width_adapt</span> <span class="o">/</span> <span class="mi">2</span>
+
+<span class="c1"># Calibrate constant width to match adaptive coverage</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize_scalar</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">coverage_for_width</span><span class="p">(</span><span class="n">w</span><span class="p">):</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">-</span> <span class="n">w</span><span class="o">/</span><span class="mi">2</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">+</span> <span class="n">w</span><span class="o">/</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">y_true</span> <span class="o">&gt;=</span> <span class="n">l</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y_true</span> <span class="o">&lt;=</span> <span class="n">u</span><span class="p">))</span> <span class="o">-</span> <span class="mf">0.9</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">minimize_scalar</span><span class="p">(</span><span class="n">coverage_for_width</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;bounded&#39;</span><span class="p">)</span>
+<span class="n">const_width</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">x</span>
+<span class="n">lower_const</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">-</span> <span class="n">const_width</span> <span class="o">/</span> <span class="mi">2</span>
+<span class="n">upper_const</span> <span class="o">=</span> <span class="n">mean_pred</span> <span class="o">+</span> <span class="n">const_width</span> <span class="o">/</span> <span class="mi">2</span>
+
+<span class="c1"># Check actual coverages</span>
+<span class="n">cov_const</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">y_true</span> <span class="o">&gt;=</span> <span class="n">lower_const</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y_true</span> <span class="o">&lt;=</span> <span class="n">upper_const</span><span class="p">))</span>
+<span class="n">cov_adapt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">y_true</span> <span class="o">&gt;=</span> <span class="n">lower_adapt</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y_true</span> <span class="o">&lt;=</span> <span class="n">upper_adapt</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Constant interval coverage: </span><span class="si">{</span><span class="n">cov_const</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Adaptive interval coverage: </span><span class="si">{</span><span class="n">cov_adapt</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>Constant interval coverage: 0.890
+Adaptive interval coverage: 0.895
+</code></pre>
+<div class="highlight"><pre><span></span><code><span class="c1"># Visualize predictions and intervals</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;True values&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">mean_pred</span><span class="p">,</span> <span class="s1">&#39;r-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Predicted mean&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">lower_adapt</span><span class="p">,</span> <span class="n">upper_adapt</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;orange&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Adaptive Prediction interval&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">lower_const</span><span class="p">,</span> <span class="n">upper_const</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Constant Prediction interval&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;X&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Synthetic Regression with Prediction Intervals&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+<p><img alt="png" src="../metrics_files/metrics_10_0.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Compute and display UQ metrics using UQRegressors utilities</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.metrics.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute_all_metrics</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.plotting.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_metrics_comparisons</span>
+
+<span class="c1"># Prepare solution_dict for plotting: method name -&gt; (mean, lower, upper)</span>
+<span class="n">solution_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;Constant&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">mean_pred</span><span class="p">,</span> <span class="n">lower_const</span><span class="p">,</span> <span class="n">upper_const</span><span class="p">),</span>
+    <span class="s1">&#39;Adaptive&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">mean_pred</span><span class="p">,</span> <span class="n">lower_adapt</span><span class="p">,</span> <span class="n">upper_adapt</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1"># Compute and print all metrics for both</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.1</span>
+<span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span> <span class="ow">in</span> <span class="n">solution_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">metrics</span> <span class="o">=</span> <span class="n">compute_all_metrics</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> metrics:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metrics</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;----------------&quot;</span><span class="p">)</span>
+<span class="c1"># Plot metrics comparison</span>
+<span class="n">plot_metrics_comparisons</span><span class="p">(</span><span class="n">solution_dict</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<pre><code>Constant metrics:
+    rmse: 0.2931
+    coverage: 0.8900
+    average_interval_width: 0.9594
+    interval_score: 1.0326
+    nll_gaussian: 0.1916
+    error_width_corr: -0.0368
+    RMSCD: 0.0975
+    RMSCD_under: 0.1581
+    lowest_group_coverage: 0.6500
+----------------
+Adaptive metrics:
+    rmse: 0.2931
+    coverage: 0.8950
+    average_interval_width: 0.8225
+    interval_score: 0.8546
+    nll_gaussian: -0.3006
+    error_width_corr: 0.6207
+    RMSCD: 0.0975
+    RMSCD_under: 0.1323
+    lowest_group_coverage: 0.6500
+----------------
+</code></pre>
+<p><img alt="png" src="../metrics_files/metrics_11_1.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_2.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_3.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_4.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_5.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_6.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_7.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_8.png" /></p>
+<p><img alt="png" src="../metrics_files/metrics_11_9.png" /></p>
+<h2 id="analysis-of-results">Analysis of results</h2>
+<p>Here we can see that although the target coverage is similar for both constant and adaptive width methods, the average interval width is slightly smaller for the adaptive method. This indicates that the adaptive method produces more informative intervals. Additionally, the correlation and log-likelihood metrics prioritize adaptivity of intervals, so both of those metrics are significantly better for the adaptive method. Note that the conditional coverage metrics in this case are similar for the two methods. However, this is due to the construction of the conditional coverage metrics in that they bin results based on their y-values, where the noise is truly heteroskedastic in their x-values. It is clear from the visualization that the adaptive method provides better conditional coverage, and this would be reflected in the metrics if binning was done by the input features as opposed to the output features. </p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      
+    
+  </body>
+</html>
