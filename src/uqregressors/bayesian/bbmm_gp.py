@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 import pickle
 from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
+from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler
 
 class ExactGP(gpytorch.models.ExactGP): 
     """
@@ -74,7 +75,10 @@ class BBMM_GP:
                  device="cpu", 
                  use_wandb=False,
                  wandb_project=None,
-                 wandb_run_name=None, 
+                 wandb_run_name=None,
+                 scale_data = True, 
+                 input_scaler = None, 
+                 output_scaler = None, 
                  random_seed=None, 
                  tuning_loggers=[],
             ):
@@ -102,6 +106,10 @@ class BBMM_GP:
         self.tuning_loggers = tuning_loggers 
         self.tuning_logs = None
 
+        self.scale_data = scale_data 
+        self.input_scaler = input_scaler or TorchStandardScaler() 
+        self.output_scaler = output_scaler or TorchStandardScaler()
+
         self.train_X = None 
         self.train_y = None
 
@@ -116,6 +124,20 @@ class BBMM_GP:
             y (np.ndarray or torch.Tensor): Training targets of shape (n_samples,).
         """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
+
+        if self.scale_data:
+            if self.requires_grad:
+                # Use clone to avoid in-place operations that break gradient flow
+                X_tensor_scaled = self.input_scaler.fit_transform(X_tensor.detach()).clone()
+                X_tensor_scaled.requires_grad_(True)
+                y_tensor_scaled = self.output_scaler.fit_transform(y_tensor.detach()).clone()
+                y_tensor_scaled.requires_grad_(True)
+                X_tensor = X_tensor_scaled
+                y_tensor = y_tensor_scaled
+            else:
+                X_tensor = self.input_scaler.fit_transform(X_tensor)
+                y_tensor = self.output_scaler.fit_transform(y_tensor)
+
         y_tensor = y_tensor.view(-1)
 
         self.train_X = X_tensor 
@@ -190,6 +212,15 @@ class BBMM_GP:
             raise ValueError("Model not yet fit. Please call fit() before predict().")
         
         X_tensor = validate_X_input(X, device=self.device, requires_grad=True)
+        if self.scale_data:
+            if self.requires_grad:
+                # Use clone to avoid in-place operations that break gradient flow
+                X_tensor_scaled = self.input_scaler.transform(X_tensor.detach()).clone()
+                X_tensor_scaled.requires_grad_(True)
+                X_tensor = X_tensor_scaled
+            else:
+                X_tensor = self.input_scaler.transform(X_tensor)
+
         self.model.eval()
         self.likelihood.eval() 
 
@@ -204,6 +235,11 @@ class BBMM_GP:
         z_score = st.norm.ppf(1 - self.alpha / 2)
         lower = mean - z_score * low_std
         upper = mean + z_score * up_std
+
+        if self.scale_data: 
+            mean = self.output_scaler.inverse_transform(mean.view(-1, 1)).squeeze()
+            lower = self.output_scaler.inverse_transform(lower.view(-1, 1)).squeeze()
+            upper = self.output_scaler.inverse_transform(upper.view(-1, 1)).squeeze()
 
         if not self.requires_grad: 
             return mean.detach().cpu().numpy(), lower.detach().cpu().numpy(), upper.detach().cpu().numpy()
@@ -242,7 +278,7 @@ class BBMM_GP:
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["model", "kernel", "likelihood", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
-                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "train_X", "train_y"]
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "train_X", "train_y", "input_scaler", "output_scaler"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module, torch.Tensor))
         }
@@ -254,7 +290,8 @@ class BBMM_GP:
 
         with open(path / "extras.pkl", 'wb') as f: 
             pickle.dump([self.kernel, self.likelihood, self.optimizer_cls, 
-                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs], f)
+                         self.optimizer_kwargs, self.scheduler_cls, self.scheduler_kwargs, 
+                         self.input_scaler, self.output_scaler], f)
 
         # Save model weights
         torch.save(self.model.state_dict(), path / f"model.pt")
@@ -292,7 +329,7 @@ class BBMM_GP:
         model = cls(**config)
 
         with open(path / "extras.pkl", 'rb') as f: 
-            kernel, likelihood, optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs = pickle.load(f)
+            kernel, likelihood, optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
 
         train_X, train_y = torch.load(path / f"train.pt")
         model.model = ExactGP(kernel, train_X, train_y, likelihood)
@@ -303,6 +340,8 @@ class BBMM_GP:
         model.scheduler_cls = scheduler_cls 
         model.scheduler_kwargs = scheduler_kwargs
         model.fitted = fitted
+        model.input_scaler = input_scaler 
+        model.output_scaler = output_scaler
 
         if load_logs: 
             logs_path = path / "logs"
