@@ -69,7 +69,6 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         alpha (float): Miscoverage rate (1 - confidence level).
         requires_grad (bool): Whether inputs should require gradient.
         tau_lo (float): Lower quantile, defaults to alpha/2.
-        tau_hi (float): Upper quantile, defaults to 1 - alpha/2.
         n_jobs (int): Number of parallel jobs for training.
         activation_str (str): String identifier of the activation function.
         learning_rate (float): Learning rate for training.
@@ -107,7 +106,6 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             alpha=0.1, 
             requires_grad=False,
             tau_lo = None, 
-            tau_hi = None, 
             n_jobs=1, 
             activation_str="ReLU",
             learning_rate=1e-3,
@@ -135,7 +133,6 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         self.alpha = alpha
         self.requires_grad = requires_grad
         self.tau_lo = tau_lo or alpha / 2 
-        self.tau_hi = tau_hi or 1 - alpha / 2
         self.activation_str = activation_str
         self.learning_rate = learning_rate
         self.epochs = epochs
@@ -153,7 +150,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         self.n_jobs = n_jobs
         self.random_seed = random_seed
-        self.quantiles = torch.tensor([self.tau_lo, self.tau_hi], device=self.device)
+        self.quantiles = torch.tensor([self.tau_lo, 1-self.tau_lo], device=self.device)
         self.models = []
         self.residuals = []
         self.conformal_width = None

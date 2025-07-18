@@ -307,7 +307,6 @@ cqr = ConformalQuantileRegressor(
 
 param_space = {
     "tau_lo": lambda trial: trial.suggest_float("tau_lo", 0.03, 0.1),
-    "tau_hi": lambda trial: trial.suggest_float("tau_hi", 0.9, 0.97) 
 }
 
 cqr_save_paths = run_regressor_test(cqr, datasets_conformal, seed=r_seed, filename="cqr_validation", test_size=0.2,

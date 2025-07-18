@@ -1503,8 +1503,7 @@ Dataset validation passed.
 <span class="n">cqr</span> <span class="o">=</span> <span class="n">ConformalQuantileRegressor</span><span class="p">(</span><span class="n">hidden_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span> 
                                  <span class="n">cal_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="c1"># Proportion of training data to use for conformal calibration</span>
                                  <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
-                                 <span class="n">tau_lo</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Lower quantile the underlying regressor is trained for; can be tuned</span>
-                                 <span class="n">tau_hi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Upper quantile the underlying regressor is trained for; can be tuned </span>
+                                 <span class="n">tau_lo</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="c1"># Lower quantile the underlying regressor is trained for; can be tuned</span>
                                  <span class="n">dropout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Dropout probability in the underlying neural network (only during training)</span>
                                  <span class="n">epochs</span><span class="o">=</span><span class="mi">2500</span><span class="p">,</span> 
                                  <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> 
@@ -1514,10 +1513,10 @@ Dataset validation passed.
 
 <span class="n">cqr</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
 <span class="n">cqr_sol</span> <span class="o">=</span> <span class="n">cqr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
-
-<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">cqr_sol</span><span class="p">,</span> <span class="s2">&quot;Split Conformal Quantile Regression&quot;</span><span class="p">)</span>
 </code></pre></div>
-<p><img alt="png" src="../getting_started_files/getting_started_13_0.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">cqr_sol</span><span class="p">,</span> <span class="s2">&quot;Split Conformal Quantile Regression&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../getting_started_files/getting_started_14_0.png" /></p>
 <h3 id="k-fold-conformal-quantile-regression">K-fold Conformal Quantile Regression</h3>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.conformal.k_fold_cqr</span><span class="w"> </span><span class="kn">import</span> <span class="n">KFoldCQR</span>
 
@@ -1525,8 +1524,7 @@ Dataset validation passed.
     <span class="n">n_estimators</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of models in the ensemble</span>
     <span class="n">hidden_sizes</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">],</span>
     <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
-    <span class="n">tau_lo</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Lower quantile the underlying regressor is trained for; can be tuned</span>
-    <span class="n">tau_hi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Upper quantile the underlying regressor is trained for; can be tuned </span>
+    <span class="n">tau_lo</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="c1"># Lower quantile the underlying regressor is trained for; can be tuned</span>
     <span class="n">dropout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">epochs</span><span class="o">=</span><span class="mi">2500</span><span class="p">,</span>
     <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
@@ -1536,10 +1534,10 @@ Dataset validation passed.
 
 <span class="n">k_fold_cqr</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
 <span class="n">k_fold_cqr_sol</span> <span class="o">=</span> <span class="n">k_fold_cqr</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
-
-<span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">k_fold_cqr_sol</span><span class="p">,</span> <span class="s2">&quot;K-Fold Conformal Quantile Regression&quot;</span><span class="p">)</span>
 </code></pre></div>
-<p><img alt="png" src="../getting_started_files/getting_started_15_0.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">k_fold_cqr_sol</span><span class="p">,</span> <span class="s2">&quot;K-Fold Conformal Quantile Regression&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../getting_started_files/getting_started_17_0.png" /></p>
 <h3 id="normalized-conformalens">Normalized ConformalEns</h3>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.conformal.conformal_ens</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConformalEnsRegressor</span>
 
@@ -1561,7 +1559,7 @@ Dataset validation passed.
 
 <span class="n">plot_uncertainty_results</span><span class="p">(</span><span class="o">*</span><span class="n">conformal_ens_sol</span><span class="p">,</span> <span class="s2">&quot;Normalized Conformal Ensemble&quot;</span><span class="p">)</span>
 </code></pre></div>
-<p><img alt="png" src="../getting_started_files/getting_started_17_0.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_19_0.png" /></p>
 <h2 id="metrics">Metrics</h2>
 <p>Several metrics can be calculated from the predicted and true values on the test set. If just computing metrics for one model, see the previous example script for usage of the method: <code>compute_all_metrics</code>. Otherwise, to graphically compare the metrics of several models, use the method <code>plot_metrics_comparisons</code>. For details on each of the metrics, see the metrics example. </p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.utils.file_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileManager</span>
@@ -1587,39 +1585,39 @@ Dataset validation passed.
                          <span class="n">log_metrics</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># Which metrics to display on a log scale</span>
                          <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;metrics_test.png&quot;</span><span class="p">)</span>
 </code></pre></div>
-<p><img alt="png" src="../getting_started_files/getting_started_19_0.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_0.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\rmse_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\rmse_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_2.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_2.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\coverage_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\coverage_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_4.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_4.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\average_interval_width_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\average_interval_width_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_6.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_6.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\interval_score_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\interval_score_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_8.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_8.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\nll_gaussian_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\nll_gaussian_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_10.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_10.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\error_width_corr_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\error_width_corr_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_12.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_12.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_14.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_14.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_under_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\RMSCD_under_metrics_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_19_16.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_21_16.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\lowest_group_coverage_metrics_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\metrics_curve_tests\plots\lowest_group_coverage_metrics_test.png
 
@@ -1665,7 +1663,7 @@ Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp0y
 Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp0u9sh1vx\models\MCDropoutRegressor_20250703_150234
 Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpl6g1sfq1\models\MCDropoutRegressor_20250703_150234
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_21_1.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_23_1.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
 Saved calibration curve to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
 
@@ -1689,7 +1687,7 @@ WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests/plots/dropout_
                   <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;dropout_test.png&quot;</span><span class="p">,</span> 
                   <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
-<p><img alt="png" src="../getting_started_files/getting_started_23_0.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_25_0.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
 Saved calibration curve to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\dropout_test.png
 
@@ -1706,7 +1704,6 @@ WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests/plots/dropout_
 <span class="c1"># Use Optuna to suggest parameters for the upper and lower quantiles of CQR</span>
 <span class="n">param_space</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;tau_lo&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">trial</span><span class="p">:</span> <span class="n">trial</span><span class="o">.</span><span class="n">suggest_float</span><span class="p">(</span><span class="s2">&quot;tau_lo&quot;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="c1"># Parameter bounds</span>
-    <span class="s2">&quot;tau_hi&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">trial</span><span class="p">:</span> <span class="n">trial</span><span class="o">.</span><span class="n">suggest_float</span><span class="p">(</span><span class="s2">&quot;tau_hi&quot;</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.99</span><span class="p">),</span>
 <span class="p">}</span>
 
 <span class="c1"># Run hyperparameter tuning study</span>
@@ -1729,6 +1726,10 @@ WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests/plots/dropout_
 <span class="c1"># Plot metrics comparisons between the tuned and untuned models</span>
 <span class="n">hyperparam_comparison_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;CQR_untuned&quot;</span><span class="p">:</span> <span class="n">cqr_sol</span><span class="p">,</span> 
                               <span class="s2">&quot;CQR_tuned&quot;</span><span class="p">:</span> <span class="n">opt_cqr_sol</span><span class="p">}</span>
+</code></pre></div>
+<p>For this simple example, hyperparameter tuning of the quantiles will result in slightly smaller average interval width while maintaining coverage (note that the optimization was not run to convergence, so the interval width may not actually be smaller)</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">uqregressors.plotting.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_metrics_comparisons</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="n">plot_metrics_comparisons</span><span class="p">(</span><span class="n">hyperparam_comparison_dict</span><span class="p">,</span> <span class="n">y_test</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
                          <span class="n">save_dir</span><span class="o">=</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span><span class="o">/</span><span class="s2">&quot;.uqregressors&quot;</span><span class="o">/</span><span class="s2">&quot;calibration_curve_tests&quot;</span><span class="p">,</span> 
@@ -1737,19 +1738,11 @@ WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests/plots/dropout_
                                            <span class="s2">&quot;RMSCD_under&quot;</span><span class="p">,</span> <span class="s2">&quot;RMSCD&quot;</span><span class="p">,</span> <span class="s2">&quot;lowest_group_coverage&quot;</span><span class="p">,</span> 
                                            <span class="s2">&quot;error_width_corr&quot;</span><span class="p">])</span>
 </code></pre></div>
-<pre><code>[I 2025-07-03 15:09:29,218] A new study created in memory with name: no-name-47ee4411-08dd-4d34-a2a5-392a43eee1a0
-[I 2025-07-03 15:10:23,735] Trial 0 finished with value: 0.21255050599575043 and parameters: {'tau_lo': 0.07702064489146865, 'tau_hi': 0.9532812424682986}. Best is trial 0 with value: 0.21255050599575043.
-[I 2025-07-03 15:11:18,085] Trial 1 finished with value: 0.17628514766693115 and parameters: {'tau_lo': 0.03544573536094887, 'tau_hi': 0.9619633081353718}. Best is trial 1 with value: 0.17628514766693115.
-[I 2025-07-03 15:12:16,919] Trial 2 finished with value: 0.2198190689086914 and parameters: {'tau_lo': 0.0671337467996006, 'tau_hi': 0.9106960103195387}. Best is trial 1 with value: 0.17628514766693115.
-[I 2025-07-03 15:13:15,684] Trial 3 finished with value: 0.18643641471862793 and parameters: {'tau_lo': 0.07271364248499564, 'tau_hi': 0.984949554237519}. Best is trial 1 with value: 0.17628514766693115.
-[I 2025-07-03 15:14:15,869] Trial 4 finished with value: 0.23922699689865112 and parameters: {'tau_lo': 0.09848472741635608, 'tau_hi': 0.9645779319660116}. Best is trial 1 with value: 0.17628514766693115.
-</code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_25_1.png" /></p>
-<p><img alt="png" src="../getting_started_files/getting_started_25_2.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_29_0.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\coverage_dropout_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\coverage_dropout_test.png
 </code></pre>
-<p><img alt="png" src="../getting_started_files/getting_started_25_4.png" /></p>
+<p><img alt="png" src="../getting_started_files/getting_started_29_2.png" /></p>
 <pre><code>Plot saved to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\average_interval_width_dropout_test.png
 Saved model comparison to C:\Users\arsha\.uqregressors\calibration_curve_tests\plots\average_interval_width_dropout_test.png
 
@@ -1759,7 +1752,6 @@ Saved model comparison to C:\Users\arsha\.uqregressors\calibration_curve_tests\p
 
 WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests')
 </code></pre>
-<p>For this simple example, hyperparameter tuning of the quantiles has resulted in slightly smaller average interval width while maintaining coverage (note that the optimization was not run to convergence)</p>
 
 
 

@@ -250,8 +250,7 @@ from uqregressors.conformal.cqr import ConformalQuantileRegressor
 cqr = ConformalQuantileRegressor(hidden_sizes = [100, 100], 
                                  cal_size=0.2, # Proportion of training data to use for conformal calibration
                                  alpha=0.1, 
-                                 tau_lo=None, # Lower quantile the underlying regressor is trained for; can be tuned
-                                 tau_hi=None, # Upper quantile the underlying regressor is trained for; can be tuned 
+                                 tau_lo=0.05, # Lower quantile the underlying regressor is trained for; can be tuned
                                  dropout=None, # Dropout probability in the underlying neural network (only during training)
                                  epochs=2500, 
                                  learning_rate=1e-3, 
@@ -261,13 +260,16 @@ cqr = ConformalQuantileRegressor(hidden_sizes = [100, 100],
 
 cqr.fit(X_train, y_train)
 cqr_sol = cqr.predict(X_test)
+```
 
+
+```python
 plot_uncertainty_results(*cqr_sol, "Split Conformal Quantile Regression")
 ```
 
 
     
-![png](getting_started_files/getting_started_13_0.png)
+![png](getting_started_files/getting_started_14_0.png)
     
 
 
@@ -281,8 +283,7 @@ k_fold_cqr = KFoldCQR(
     n_estimators=5, # Number of models in the ensemble
     hidden_sizes=[100, 100],
     alpha=0.1, 
-    tau_lo=None, # Lower quantile the underlying regressor is trained for; can be tuned
-    tau_hi=None, # Upper quantile the underlying regressor is trained for; can be tuned 
+    tau_lo=0.05, # Lower quantile the underlying regressor is trained for; can be tuned
     dropout=None,
     epochs=2500,
     learning_rate=1e-3,
@@ -292,13 +293,16 @@ k_fold_cqr = KFoldCQR(
 
 k_fold_cqr.fit(X_train, y_train)
 k_fold_cqr_sol = k_fold_cqr.predict(X_test)
+```
 
+
+```python
 plot_uncertainty_results(*k_fold_cqr_sol, "K-Fold Conformal Quantile Regression")
 ```
 
 
     
-![png](getting_started_files/getting_started_15_0.png)
+![png](getting_started_files/getting_started_17_0.png)
     
 
 
@@ -329,7 +333,7 @@ plot_uncertainty_results(*conformal_ens_sol, "Normalized Conformal Ensemble")
 
 
     
-![png](getting_started_files/getting_started_17_0.png)
+![png](getting_started_files/getting_started_19_0.png)
     
 
 
@@ -365,7 +369,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_0.png)
+![png](getting_started_files/getting_started_21_0.png)
     
 
 
@@ -375,7 +379,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_2.png)
+![png](getting_started_files/getting_started_21_2.png)
     
 
 
@@ -385,7 +389,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_4.png)
+![png](getting_started_files/getting_started_21_4.png)
     
 
 
@@ -395,7 +399,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_6.png)
+![png](getting_started_files/getting_started_21_6.png)
     
 
 
@@ -405,7 +409,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_8.png)
+![png](getting_started_files/getting_started_21_8.png)
     
 
 
@@ -415,7 +419,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_10.png)
+![png](getting_started_files/getting_started_21_10.png)
     
 
 
@@ -425,7 +429,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_12.png)
+![png](getting_started_files/getting_started_21_12.png)
     
 
 
@@ -435,7 +439,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_14.png)
+![png](getting_started_files/getting_started_21_14.png)
     
 
 
@@ -445,7 +449,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_19_16.png)
+![png](getting_started_files/getting_started_21_16.png)
     
 
 
@@ -503,7 +507,7 @@ plot_cal_curve(des_cov,
 
 
     
-![png](getting_started_files/getting_started_21_1.png)
+![png](getting_started_files/getting_started_23_1.png)
     
 
 
@@ -538,7 +542,7 @@ plot_pred_vs_true(*dropout_sol,
 
 
     
-![png](getting_started_files/getting_started_23_0.png)
+![png](getting_started_files/getting_started_25_0.png)
     
 
 
@@ -563,7 +567,6 @@ from uqregressors.tuning.tuning import tune_hyperparams, interval_width
 # Use Optuna to suggest parameters for the upper and lower quantiles of CQR
 param_space = {
     "tau_lo": lambda trial: trial.suggest_float("tau_lo", 0.01, 0.1), # Parameter bounds
-    "tau_hi": lambda trial: trial.suggest_float("tau_hi", 0.9, 0.99),
 }
 
 # Run hyperparameter tuning study
@@ -586,6 +589,14 @@ plot_uncertainty_results(*opt_cqr_sol, "Tuned Quantile Split Conformal Quantile 
 # Plot metrics comparisons between the tuned and untuned models
 hyperparam_comparison_dict = {"CQR_untuned": cqr_sol, 
                               "CQR_tuned": opt_cqr_sol}
+```
+
+For this simple example, hyperparameter tuning of the quantiles will result in slightly smaller average interval width while maintaining coverage (note that the optimization was not run to convergence, so the interval width may not actually be smaller)
+
+
+```python
+from uqregressors.plotting.plotting import plot_metrics_comparisons
+from pathlib import Path
 
 plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=True, 
                          save_dir=Path.home()/".uqregressors"/"calibration_curve_tests", 
@@ -595,23 +606,9 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
                                            "error_width_corr"])
 ```
 
-    [I 2025-07-03 15:09:29,218] A new study created in memory with name: no-name-47ee4411-08dd-4d34-a2a5-392a43eee1a0
-    [I 2025-07-03 15:10:23,735] Trial 0 finished with value: 0.21255050599575043 and parameters: {'tau_lo': 0.07702064489146865, 'tau_hi': 0.9532812424682986}. Best is trial 0 with value: 0.21255050599575043.
-    [I 2025-07-03 15:11:18,085] Trial 1 finished with value: 0.17628514766693115 and parameters: {'tau_lo': 0.03544573536094887, 'tau_hi': 0.9619633081353718}. Best is trial 1 with value: 0.17628514766693115.
-    [I 2025-07-03 15:12:16,919] Trial 2 finished with value: 0.2198190689086914 and parameters: {'tau_lo': 0.0671337467996006, 'tau_hi': 0.9106960103195387}. Best is trial 1 with value: 0.17628514766693115.
-    [I 2025-07-03 15:13:15,684] Trial 3 finished with value: 0.18643641471862793 and parameters: {'tau_lo': 0.07271364248499564, 'tau_hi': 0.984949554237519}. Best is trial 1 with value: 0.17628514766693115.
-    [I 2025-07-03 15:14:15,869] Trial 4 finished with value: 0.23922699689865112 and parameters: {'tau_lo': 0.09848472741635608, 'tau_hi': 0.9645779319660116}. Best is trial 1 with value: 0.17628514766693115.
-    
-
 
     
-![png](getting_started_files/getting_started_25_1.png)
-    
-
-
-
-    
-![png](getting_started_files/getting_started_25_2.png)
+![png](getting_started_files/getting_started_29_0.png)
     
 
 
@@ -621,7 +618,7 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
 
 
     
-![png](getting_started_files/getting_started_25_4.png)
+![png](getting_started_files/getting_started_29_2.png)
     
 
 
@@ -635,5 +632,3 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
     WindowsPath('C:/Users/arsha/.uqregressors/calibration_curve_tests')
 
 
-
-For this simple example, hyperparameter tuning of the quantiles has resulted in slightly smaller average interval width while maintaining coverage (note that the optimization was not run to convergence)
