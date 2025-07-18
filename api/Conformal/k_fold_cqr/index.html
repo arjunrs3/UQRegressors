@@ -1424,22 +1424,6 @@ and applies conformal prediction to calibrate prediction intervals.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>tau_hi</code>
-            </td>
-            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Upper quantile, defaults to 1 - alpha/2.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
                 <code>n_jobs</code>
             </td>
             <td>
@@ -2241,10 +2225,7 @@ and applies conformal prediction to calibrate prediction intervals.</p>
 <span class="normal">462</span>
 <span class="normal">463</span>
 <span class="normal">464</span>
-<span class="normal">465</span>
-<span class="normal">466</span>
-<span class="normal">467</span>
-<span class="normal">468</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">KFoldCQR</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span> 
+<span class="normal">465</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">KFoldCQR</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    K-Fold Conformalized Quantile Regressor for uncertainty estimation in regression tasks.</span>
 
@@ -2259,7 +2240,6 @@ and applies conformal prediction to calibrate prediction intervals.</p>
 <span class="sd">        alpha (float): Miscoverage rate (1 - confidence level).</span>
 <span class="sd">        requires_grad (bool): Whether inputs should require gradient.</span>
 <span class="sd">        tau_lo (float): Lower quantile, defaults to alpha/2.</span>
-<span class="sd">        tau_hi (float): Upper quantile, defaults to 1 - alpha/2.</span>
 <span class="sd">        n_jobs (int): Number of parallel jobs for training.</span>
 <span class="sd">        activation_str (str): String identifier of the activation function.</span>
 <span class="sd">        learning_rate (float): Learning rate for training.</span>
@@ -2297,7 +2277,6 @@ and applies conformal prediction to calibrate prediction intervals.</p>
             <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> 
             <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
             <span class="n">tau_lo</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
-            <span class="n">tau_hi</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
             <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> 
             <span class="n">activation_str</span><span class="o">=</span><span class="s2">&quot;ReLU&quot;</span><span class="p">,</span>
             <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
@@ -2325,7 +2304,6 @@ and applies conformal prediction to calibrate prediction intervals.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="n">requires_grad</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tau_lo</span> <span class="o">=</span> <span class="n">tau_lo</span> <span class="ow">or</span> <span class="n">alpha</span> <span class="o">/</span> <span class="mi">2</span> 
-        <span class="bp">self</span><span class="o">.</span><span class="n">tau_hi</span> <span class="o">=</span> <span class="n">tau_hi</span> <span class="ow">or</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">activation_str</span> <span class="o">=</span> <span class="n">activation_str</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">learning_rate</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">epochs</span> <span class="o">=</span> <span class="n">epochs</span>
@@ -2343,7 +2321,7 @@ and applies conformal prediction to calibrate prediction intervals.</p>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">n_jobs</span> <span class="o">=</span> <span class="n">n_jobs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">random_seed</span> <span class="o">=</span> <span class="n">random_seed</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">quantiles</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_lo</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_hi</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quantiles</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_lo</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_lo</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">residuals</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conformal_width</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2757,7 +2735,10 @@ and applies conformal prediction to calibrate prediction intervals.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\conformal\k_fold_cqr.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">242</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
 <span class="normal">243</span>
 <span class="normal">244</span>
 <span class="normal">245</span>
@@ -2786,10 +2767,7 @@ and applies conformal prediction to calibrate prediction intervals.</p>
 <span class="normal">268</span>
 <span class="normal">269</span>
 <span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
+<span class="normal">271</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Fit the ensemble on training data.</span>
 
@@ -2934,7 +2912,10 @@ and applies conformal prediction to calibrate prediction intervals.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\conformal\k_fold_cqr.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">389</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
 <span class="normal">390</span>
 <span class="normal">391</span>
 <span class="normal">392</span>
@@ -3010,10 +2991,7 @@ and applies conformal prediction to calibrate prediction intervals.</p>
 <span class="normal">462</span>
 <span class="normal">463</span>
 <span class="normal">464</span>
-<span class="normal">465</span>
-<span class="normal">466</span>
-<span class="normal">467</span>
-<span class="normal">468</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">465</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">load_logs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Load a saved KFoldCQR model from disk.</span>
@@ -3177,7 +3155,10 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\conformal\k_fold_cqr.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">276</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
 <span class="normal">277</span>
 <span class="normal">278</span>
 <span class="normal">279</span>
@@ -3234,10 +3215,7 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 <span class="normal">330</span>
 <span class="normal">331</span>
 <span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span> 
+<span class="normal">333</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Predicts the target values with uncertainty estimates.</span>
 
@@ -3390,7 +3368,10 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\conformal\k_fold_cqr.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">173</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
 <span class="normal">174</span>
 <span class="normal">175</span>
 <span class="normal">176</span>
@@ -3399,10 +3380,7 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 <span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">quantile_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
+<span class="normal">182</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">quantile_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Quantile loss used for training the quantile regressors.</span>
 
@@ -3468,7 +3446,10 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\conformal\k_fold_cqr.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">338</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
 <span class="normal">339</span>
 <span class="normal">340</span>
 <span class="normal">341</span>
@@ -3514,10 +3495,7 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 <span class="normal">381</span>
 <span class="normal">382</span>
 <span class="normal">383</span>
-<span class="normal">384</span>
-<span class="normal">385</span>
-<span class="normal">386</span>
-<span class="normal">387</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<span class="normal">384</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Save the trained model and associated configuration to disk.</span>
 
