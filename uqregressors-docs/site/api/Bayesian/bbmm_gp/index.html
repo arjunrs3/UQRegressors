@@ -1514,6 +1514,54 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>scale_data</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to scale input and output data.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>input_scaler</code>
+            </td>
+            <td>
+                  <code><span title="object">object</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scaler for input features.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>output_scaler</code>
+            </td>
+            <td>
+                  <code><span title="object">object</span> or None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scaler for target values.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>random_seed</code>
             </td>
             <td>
@@ -1591,8 +1639,7 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 
               <details class="quote">
                 <summary>Source code in <code>uqregressors\bayesian\bbmm_gp.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 30</span>
-<span class="normal"> 31</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 31</span>
 <span class="normal"> 32</span>
 <span class="normal"> 33</span>
 <span class="normal"> 34</span>
@@ -1886,7 +1933,49 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 <span class="normal">322</span>
 <span class="normal">323</span>
 <span class="normal">324</span>
-<span class="normal">325</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BBMM_GP</span><span class="p">:</span> 
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BBMM_GP</span><span class="p">:</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A wrapper around GPyTorch&#39;s ExactGP for regression with uncertainty quantification.</span>
 
@@ -1910,6 +1999,9 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 <span class="sd">        use_wandb (bool): If True, enables wandb logging.</span>
 <span class="sd">        wandb_project (str or None): Name of the wandb project.</span>
 <span class="sd">        wandb_run_name (str or None): Name of the wandb run.</span>
+<span class="sd">        scale_data (bool): Whether to scale input and output data.</span>
+<span class="sd">        input_scaler (object or None): Scaler for input features.</span>
+<span class="sd">        output_scaler (object or None): Scaler for target values.</span>
 <span class="sd">        random_seed (int or None): Random seed for reproducibility.</span>
 <span class="sd">        tuning_loggers (List[Logger]): Optional list of loggers from hyperparameter tuning.</span>
 
@@ -1933,7 +2025,10 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
                  <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> 
                  <span class="n">use_wandb</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                  <span class="n">wandb_project</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                 <span class="n">wandb_run_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                 <span class="n">wandb_run_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">scale_data</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> 
+                 <span class="n">input_scaler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                 <span class="n">output_scaler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
                  <span class="n">random_seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
                  <span class="n">tuning_loggers</span><span class="o">=</span><span class="p">[],</span>
             <span class="p">):</span>
@@ -1961,6 +2056,10 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">tuning_loggers</span> <span class="o">=</span> <span class="n">tuning_loggers</span> 
         <span class="bp">self</span><span class="o">.</span><span class="n">tuning_logs</span> <span class="o">=</span> <span class="kc">None</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_data</span> <span class="o">=</span> <span class="n">scale_data</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span> <span class="o">=</span> <span class="n">input_scaler</span> <span class="ow">or</span> <span class="n">TorchStandardScaler</span><span class="p">()</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span> <span class="o">=</span> <span class="n">output_scaler</span> <span class="ow">or</span> <span class="n">TorchStandardScaler</span><span class="p">()</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">train_X</span> <span class="o">=</span> <span class="kc">None</span> 
         <span class="bp">self</span><span class="o">.</span><span class="n">train_y</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -1975,6 +2074,20 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 <span class="sd">            y (np.ndarray or torch.Tensor): Training targets of shape (n_samples,).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">X_tensor</span><span class="p">,</span> <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">validate_and_prepare_inputs</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span>
+                <span class="c1"># Use clone to avoid in-place operations that break gradient flow</span>
+                <span class="n">X_tensor_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+                <span class="n">X_tensor_scaled</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">y_tensor_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">y_tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+                <span class="n">y_tensor_scaled</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">X_tensor</span> <span class="o">=</span> <span class="n">X_tensor_scaled</span>
+                <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">y_tensor_scaled</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">X_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="p">)</span>
+                <span class="n">y_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">y_tensor</span><span class="p">)</span>
+
         <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">y_tensor</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">train_X</span> <span class="o">=</span> <span class="n">X_tensor</span> 
@@ -2049,6 +2162,15 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Model not yet fit. Please call fit() before predict().&quot;</span><span class="p">)</span>
 
         <span class="n">X_tensor</span> <span class="o">=</span> <span class="n">validate_X_input</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_data</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span>
+                <span class="c1"># Use clone to avoid in-place operations that break gradient flow</span>
+                <span class="n">X_tensor_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+                <span class="n">X_tensor_scaled</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">X_tensor</span> <span class="o">=</span> <span class="n">X_tensor_scaled</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">X_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span> 
 
@@ -2063,6 +2185,11 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
         <span class="n">z_score</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
         <span class="n">lower</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">-</span> <span class="n">z_score</span> <span class="o">*</span> <span class="n">low_std</span>
         <span class="n">upper</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">z_score</span> <span class="o">*</span> <span class="n">up_std</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_data</span><span class="p">:</span> 
+            <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+            <span class="n">lower</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">lower</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+            <span class="n">upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">upper</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span> 
             <span class="k">return</span> <span class="n">mean</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">lower</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">upper</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
@@ -2101,7 +2228,7 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
         <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;kernel&quot;</span><span class="p">,</span> <span class="s2">&quot;likelihood&quot;</span><span class="p">,</span> <span class="s2">&quot;optimizer_cls&quot;</span><span class="p">,</span> <span class="s2">&quot;optimizer_kwargs&quot;</span><span class="p">,</span> <span class="s2">&quot;scheduler_cls&quot;</span><span class="p">,</span> <span class="s2">&quot;scheduler_kwargs&quot;</span><span class="p">,</span> 
-                         <span class="s2">&quot;_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;training_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;train_X&quot;</span><span class="p">,</span> <span class="s2">&quot;train_y&quot;</span><span class="p">]</span>
+                         <span class="s2">&quot;_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;training_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;train_X&quot;</span><span class="p">,</span> <span class="s2">&quot;train_y&quot;</span><span class="p">,</span> <span class="s2">&quot;input_scaler&quot;</span><span class="p">,</span> <span class="s2">&quot;output_scaler&quot;</span><span class="p">]</span>
             <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
             <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">))</span>
         <span class="p">}</span>
@@ -2113,7 +2240,8 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;extras.pkl&quot;</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> 
             <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_cls</span><span class="p">,</span> 
-                         <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_cls</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_kwargs</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_cls</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_kwargs</span><span class="p">,</span> 
+                         <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
 
         <span class="c1"># Save model weights</span>
         <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;model.pt&quot;</span><span class="p">)</span>
@@ -2151,7 +2279,7 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
         <span class="n">model</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">config</span><span class="p">)</span>
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;extras.pkl&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> 
-            <span class="n">kernel</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">optimizer_cls</span><span class="p">,</span> <span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="n">scheduler_cls</span><span class="p">,</span> <span class="n">scheduler_kwargs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">kernel</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">optimizer_cls</span><span class="p">,</span> <span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="n">scheduler_cls</span><span class="p">,</span> <span class="n">scheduler_kwargs</span><span class="p">,</span> <span class="n">input_scaler</span><span class="p">,</span> <span class="n">output_scaler</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
         <span class="n">train_X</span><span class="p">,</span> <span class="n">train_y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;train.pt&quot;</span><span class="p">)</span>
         <span class="n">model</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">ExactGP</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">train_X</span><span class="p">,</span> <span class="n">train_y</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">)</span>
@@ -2162,6 +2290,8 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
         <span class="n">model</span><span class="o">.</span><span class="n">scheduler_cls</span> <span class="o">=</span> <span class="n">scheduler_cls</span> 
         <span class="n">model</span><span class="o">.</span><span class="n">scheduler_kwargs</span> <span class="o">=</span> <span class="n">scheduler_kwargs</span>
         <span class="n">model</span><span class="o">.</span><span class="n">fitted</span> <span class="o">=</span> <span class="n">fitted</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">input_scaler</span> <span class="o">=</span> <span class="n">input_scaler</span> 
+        <span class="n">model</span><span class="o">.</span><span class="n">output_scaler</span> <span class="o">=</span> <span class="n">output_scaler</span>
 
         <span class="k">if</span> <span class="n">load_logs</span><span class="p">:</span> 
             <span class="n">logs_path</span> <span class="o">=</span> <span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;logs&quot;</span>
@@ -2260,18 +2390,7 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\bayesian\bbmm_gp.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">121</span>
 <span class="normal">122</span>
 <span class="normal">123</span>
 <span class="normal">124</span>
@@ -2320,7 +2439,32 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 <span class="normal">167</span>
 <span class="normal">168</span>
 <span class="normal">169</span>
-<span class="normal">170</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Fits the GP model to training data.</span>
 
@@ -2329,6 +2473,20 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 <span class="sd">        y (np.ndarray or torch.Tensor): Training targets of shape (n_samples,).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">X_tensor</span><span class="p">,</span> <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">validate_and_prepare_inputs</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span>
+            <span class="c1"># Use clone to avoid in-place operations that break gradient flow</span>
+            <span class="n">X_tensor_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">X_tensor_scaled</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">y_tensor_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">y_tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">y_tensor_scaled</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">X_tensor</span> <span class="o">=</span> <span class="n">X_tensor_scaled</span>
+            <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">y_tensor_scaled</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">X_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="p">)</span>
+            <span class="n">y_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">y_tensor</span><span class="p">)</span>
+
     <span class="n">y_tensor</span> <span class="o">=</span> <span class="n">y_tensor</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">train_X</span> <span class="o">=</span> <span class="n">X_tensor</span> 
@@ -2493,47 +2651,7 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\bayesian\bbmm_gp.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">309</span>
 <span class="normal">310</span>
 <span class="normal">311</span>
 <span class="normal">312</span>
@@ -2549,7 +2667,49 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 <span class="normal">322</span>
 <span class="normal">323</span>
 <span class="normal">324</span>
-<span class="normal">325</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">load_logs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Loads a saved BBMM_GP model from disk.</span>
@@ -2575,7 +2735,7 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
     <span class="n">model</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">config</span><span class="p">)</span>
 
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;extras.pkl&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> 
-        <span class="n">kernel</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">optimizer_cls</span><span class="p">,</span> <span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="n">scheduler_cls</span><span class="p">,</span> <span class="n">scheduler_kwargs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">kernel</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">optimizer_cls</span><span class="p">,</span> <span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="n">scheduler_cls</span><span class="p">,</span> <span class="n">scheduler_kwargs</span><span class="p">,</span> <span class="n">input_scaler</span><span class="p">,</span> <span class="n">output_scaler</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
     <span class="n">train_X</span><span class="p">,</span> <span class="n">train_y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;train.pt&quot;</span><span class="p">)</span>
     <span class="n">model</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">ExactGP</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">train_X</span><span class="p">,</span> <span class="n">train_y</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">)</span>
@@ -2586,6 +2746,8 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
     <span class="n">model</span><span class="o">.</span><span class="n">scheduler_cls</span> <span class="o">=</span> <span class="n">scheduler_cls</span> 
     <span class="n">model</span><span class="o">.</span><span class="n">scheduler_kwargs</span> <span class="o">=</span> <span class="n">scheduler_kwargs</span>
     <span class="n">model</span><span class="o">.</span><span class="n">fitted</span> <span class="o">=</span> <span class="n">fitted</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">input_scaler</span> <span class="o">=</span> <span class="n">input_scaler</span> 
+    <span class="n">model</span><span class="o">.</span><span class="n">output_scaler</span> <span class="o">=</span> <span class="n">output_scaler</span>
 
     <span class="k">if</span> <span class="n">load_logs</span><span class="p">:</span> 
         <span class="n">logs_path</span> <span class="o">=</span> <span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;logs&quot;</span>
@@ -2698,18 +2860,18 @@ Outputs mean predictions and confidence intervals using predictive variance.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\bayesian\bbmm_gp.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">mll_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">mll_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">preds</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Computes the negative log marginal likelihood (default loss function).</span>
 
@@ -2805,32 +2967,7 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\bayesian\bbmm_gp.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span>
-<span class="normal">175</span>
-<span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">197</span>
 <span class="normal">198</span>
 <span class="normal">199</span>
 <span class="normal">200</span>
@@ -2845,7 +2982,46 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 <span class="normal">209</span>
 <span class="normal">210</span>
 <span class="normal">211</span>
-<span class="normal">212</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Predicts the target values with uncertainty estimates.</span>
 
@@ -2866,6 +3042,15 @@ Otherwise, they are PyTorch tensors with gradients.</p>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Model not yet fit. Please call fit() before predict().&quot;</span><span class="p">)</span>
 
     <span class="n">X_tensor</span> <span class="o">=</span> <span class="n">validate_X_input</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_data</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span>
+            <span class="c1"># Use clone to avoid in-place operations that break gradient flow</span>
+            <span class="n">X_tensor_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">X_tensor_scaled</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">X_tensor</span> <span class="o">=</span> <span class="n">X_tensor_scaled</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">X_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">X_tensor</span><span class="p">)</span>
+
     <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span> 
 
@@ -2880,6 +3065,11 @@ Otherwise, they are PyTorch tensors with gradients.</p>
     <span class="n">z_score</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
     <span class="n">lower</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">-</span> <span class="n">z_score</span> <span class="o">*</span> <span class="n">low_std</span>
     <span class="n">upper</span> <span class="o">=</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">z_score</span> <span class="o">*</span> <span class="n">up_std</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_data</span><span class="p">:</span> 
+        <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">lower</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">upper</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">:</span> 
         <span class="k">return</span> <span class="n">mean</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">lower</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span> <span class="n">upper</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
@@ -2939,46 +3129,47 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 
             <details class="quote">
               <summary>Source code in <code>uqregressors\bayesian\bbmm_gp.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
-<span class="normal">260</span>
-<span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Saves model configuration, weights, and training data to disk.</span>
 
@@ -2995,7 +3186,7 @@ Otherwise, they are PyTorch tensors with gradients.</p>
     <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;kernel&quot;</span><span class="p">,</span> <span class="s2">&quot;likelihood&quot;</span><span class="p">,</span> <span class="s2">&quot;optimizer_cls&quot;</span><span class="p">,</span> <span class="s2">&quot;optimizer_kwargs&quot;</span><span class="p">,</span> <span class="s2">&quot;scheduler_cls&quot;</span><span class="p">,</span> <span class="s2">&quot;scheduler_kwargs&quot;</span><span class="p">,</span> 
-                     <span class="s2">&quot;_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;training_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;train_X&quot;</span><span class="p">,</span> <span class="s2">&quot;train_y&quot;</span><span class="p">]</span>
+                     <span class="s2">&quot;_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;training_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_loggers&quot;</span><span class="p">,</span> <span class="s2">&quot;tuning_logs&quot;</span><span class="p">,</span> <span class="s2">&quot;train_X&quot;</span><span class="p">,</span> <span class="s2">&quot;train_y&quot;</span><span class="p">,</span> <span class="s2">&quot;input_scaler&quot;</span><span class="p">,</span> <span class="s2">&quot;output_scaler&quot;</span><span class="p">]</span>
         <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
         <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">))</span>
     <span class="p">}</span>
@@ -3007,7 +3198,8 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;extras.pkl&quot;</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> 
         <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_cls</span><span class="p">,</span> 
-                     <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_cls</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_kwargs</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_kwargs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_cls</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_kwargs</span><span class="p">,</span> 
+                     <span class="bp">self</span><span class="o">.</span><span class="n">input_scaler</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_scaler</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
 
     <span class="c1"># Save model weights</span>
     <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;model.pt&quot;</span><span class="p">)</span>
@@ -3137,8 +3329,7 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 
               <details class="quote">
                 <summary>Source code in <code>uqregressors\bayesian\bbmm_gp.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">10</span>
-<span class="normal">11</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
@@ -3155,7 +3346,8 @@ Otherwise, they are PyTorch tensors with gradients.</p>
 <span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
-<span class="normal">28</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ExactGP</span><span class="p">(</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ExactGP</span><span class="p">):</span> 
+<span class="normal">28</span>
+<span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ExactGP</span><span class="p">(</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ExactGP</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A custom GPyTorch Exact Gaussian Process model using a constant mean and a user-specified kernel.</span>
 

@@ -52,6 +52,9 @@ class BBMM_GP:
         use_wandb (bool): If True, enables wandb logging.
         wandb_project (str or None): Name of the wandb project.
         wandb_run_name (str or None): Name of the wandb run.
+        scale_data (bool): Whether to scale input and output data.
+        input_scaler (object or None): Scaler for input features.
+        output_scaler (object or None): Scaler for target values.
         random_seed (int or None): Random seed for reproducibility.
         tuning_loggers (List[Logger]): Optional list of loggers from hyperparameter tuning.
 
