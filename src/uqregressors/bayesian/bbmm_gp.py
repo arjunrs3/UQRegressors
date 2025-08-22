@@ -188,7 +188,7 @@ class BBMM_GP:
 
             if scheduler is not None:
                 scheduler.step()
-            if epoch % (self.epochs / 20) == 0:
+            if epoch % int(self.epochs / 20) == 0:
                 logger.log({"epoch": epoch, "train_loss": loss})
         
         self._loggers.append(logger)
@@ -329,15 +329,19 @@ class BBMM_GP:
         config.pop("optimizer", None)
         config.pop("scheduler", None)
         fitted = config.pop("fitted", False)
+        weight_decay = config.pop("weight_decay", None)
         model = cls(**config)
 
         with open(path / "extras.pkl", 'rb') as f: 
             kernel, likelihood, optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
 
+        
         train_X, train_y = torch.load(path / f"train.pt")
         model.model = ExactGP(kernel, train_X, train_y, likelihood)
         model.model.load_state_dict(torch.load(path / f"model.pt", map_location=device))
 
+        model.kernel = kernel 
+        model.likelihood = likelihood
         model.optimizer_cls = optimizer_cls 
         model.optimizer_kwargs = optimizer_kwargs 
         model.scheduler_cls = scheduler_cls 

@@ -183,6 +183,8 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         )
         scheduler = None 
         if self.scheduler_cls: 
+            if self.scheduler_cls == torch.optim.lr_scheduler.CosineAnnealingLR: 
+                self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
         dataset = TensorDataset(X_tensor[train_idx], y_tensor[train_idx])
@@ -398,6 +400,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         config.pop("scheduler", None)
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
+        weight_decay = config.pop("weight_decay", None)
         
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
@@ -405,7 +408,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
 
         with open(path / "extras.pkl", 'rb') as f: 
             optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
-        
+
         # Recreate models
         model.input_dim = input_dim
         activation = get_activation(config["activation_str"])

@@ -134,7 +134,11 @@ def tune_hyperparams(
                     estimator = regressor
                 
                 for param_name, param_value in trial_params.items():
-                    setattr(estimator, param_name, param_value)
+                    if param_name == "weight_decay": 
+                        print("setting weight decay")
+                        estimator.optimizer_kwargs["weight_decay"] = param_value
+                    else: 
+                        setattr(estimator, param_name, param_value)
 
                 estimator.fit(X_train, y_train)
                 score = score_fn(estimator, X_val, y_val)
@@ -162,7 +166,11 @@ def tune_hyperparams(
         best_estimator = regressor.__class__.load(tmpdir)
 
     for k, v in best_params.items():
-        setattr(best_estimator, k, v)
+        if k == "weight_decay": 
+            print("setting weight decay")
+            best_estimator.optimizer_kwargs["weight_decay"] = v
+        else: 
+            setattr(best_estimator, k, v)
     best_estimator.fit(X, y)
 
     if verbose:
