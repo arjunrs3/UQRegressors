@@ -85,6 +85,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         output_scaler (TorchStandardScaler): Scaler for target outputs.
         random_seed (int or None): Random seed for reproducibility.
         tuning_loggers (list): Optional list of loggers for tuning.
+        logging_frequency (int): Number of times to log training results during training.
 
     Attributes: 
         quantiles (Tensor): The lower and upper quantiles for prediction.
@@ -119,7 +120,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             input_scaler=None,
             output_scaler=None, 
             random_seed=None,
-            tuning_loggers = []
+            tuning_loggers = [], 
+            logging_frequency =20,
     ):
         self.name = name
         self.hidden_sizes = hidden_sizes 
@@ -156,6 +158,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
+        self.logging_frequency = logging_frequency
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
@@ -222,6 +225,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
 
         scheduler = None
         if self.scheduler_cls is not None:
+            if self.scheduler_cls == torch.optim.lr_scheduler.CosineAnnealingLR: 
+                self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
         dataset = TensorDataset(X_train, y_train)
@@ -241,7 +246,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             if scheduler is not None:
                 scheduler.step()
 
-            if epoch % (self.epochs / 20) == 0:
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
         self.model.eval()
@@ -383,7 +388,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         config.pop("scheduler", None)
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
-        
+        weight_decay = config.pop("weight_decay", None)
+
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
         model = cls(**config)

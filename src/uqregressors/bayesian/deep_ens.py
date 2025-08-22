@@ -92,6 +92,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         input_scaler (object or None): Scaler for input features.
         output_scaler (object or None): Scaler for target values.
         tuning_loggers (list): List of tuning loggers.
+        logging_frequency (int): Number of times to log training results during training.
 
     Attributes:
         models (list): List of trained PyTorch MLP models.
@@ -127,6 +128,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         input_scaler=None,
         output_scaler=None, 
         tuning_loggers = [],
+        logging_frequency=20, 
     ):
         self.name=name
         self.n_estimators = n_estimators
@@ -160,6 +162,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
+        self.logging_frequency = logging_frequency
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
@@ -211,6 +214,8 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         )
         scheduler = None 
         if self.scheduler_cls: 
+            if self.scheduler_cls == torch.optim.lr_scheduler.CosineAnnealingLR: 
+                self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
         dataset = TensorDataset(X_tensor, y_tensor)
@@ -235,8 +240,9 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss.item()
             
-            if epoch % (self.epochs / 20) == 0:
-                logger.log({"epoch": epoch, "train_loss": epoch_loss})
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
+                current_lr = optimizer.param_groups[0]['lr']
+                logger.log({"epoch": epoch, "train_loss": epoch_loss, "lr": current_lr})
 
             if scheduler: 
                 scheduler.step()
@@ -347,7 +353,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             k: v for k, v in self.__dict__.items()
             if k not in ["models", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", 
                          "input_scaler", "output_scaler", "_loggers", "training_logs", "tuning_loggers", 
-                         "tuning_logs"]
+                         "tuning_logs", "tau"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
@@ -398,6 +404,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         config.pop("scheduler", None)
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
+        weight_decay = config.pop("weight_decay", None)
 
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
@@ -414,6 +421,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
 
         with open(path / "extras.pkl", 'rb') as f: 
             optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
+
 
         model.optimizer_cls = optimizer_cls 
         model.optimizer_kwargs = optimizer_kwargs 

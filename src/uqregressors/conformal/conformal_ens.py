@@ -89,6 +89,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         input_scaler (TorchStandardScaler): Scaler for input features.
         output_scaler (TorchStandardScaler): Scaler for target outputs.
         tuning_loggers (list): Optional list of loggers for tuning.
+        logging_frequency (int): Number of times to log training results during training
 
     Attributes: 
         models (list[QuantNN]): A list of the models in the ensemble.
@@ -125,7 +126,8 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                  scale_data=True, 
                  input_scaler=None,
                  output_scaler=None,
-                 tuning_loggers = []
+                 tuning_loggers = [], 
+                 logging_frequency = 20,
     ): 
         self.name = name
         self.n_estimators = n_estimators
@@ -164,7 +166,8 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.models = []
         self.residuals = []
 
-        self._loggers = []
+        self._loggers = [], 
+        self.logging_frequency = logging_frequency 
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
@@ -183,6 +186,8 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         )
         scheduler = None 
         if self.scheduler_cls: 
+            if self.scheduler_cls == torch.optim.lr_scheduler.CosineAnnealingLR: 
+                self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
         dataset = TensorDataset(X_tensor[train_idx], y_tensor[train_idx])
@@ -207,7 +212,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss.item()
             
-            if epoch % (self.epochs / 20) == 0:
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
             if scheduler: 
@@ -398,6 +403,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         config.pop("scheduler", None)
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
+        weight_decay = config.pop("weight_decay", None)
         
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
@@ -405,7 +411,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
 
         with open(path / "extras.pkl", 'rb') as f: 
             optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
-        
+
         # Recreate models
         model.input_dim = input_dim
         activation = get_activation(config["activation_str"])

@@ -88,6 +88,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         output_scaler (TorchStandardScaler): Scaler for target outputs.
         random_seed (int or None): Random seed for reproducibility.
         tuning_loggers (list): Optional list of loggers for tuning.
+        logging_frequency (int): Number of times to log training results during training.
 
     Attributes: 
         quantiles (Tensor): The lower and upper quantiles for prediction.
@@ -124,7 +125,8 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             input_scaler = None, 
             output_scaler = None,
             random_seed=None, 
-            tuning_loggers = []
+            tuning_loggers = [], 
+            logging_frequency = 20, 
     ):
         self.name = name
         self.n_estimators = n_estimators
@@ -162,6 +164,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
+        self.logging_frequency = logging_frequency
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
@@ -194,6 +197,8 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         )
         scheduler = None 
         if self.scheduler_cls: 
+            if self.scheduler_cls == torch.optim.lr_scheduler.CosineAnnealingLR: 
+                self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
         X_train = X_tensor.detach()[train_idx]
@@ -221,8 +226,9 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss 
             
-            if epoch % (self.epochs / 20) == 0:
-                logger.log({"epoch": epoch, "train_loss": epoch_loss})
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
+                current_lr = optimizer.param_groups[0]['lr']
+                logger.log({"epoch": epoch, "train_loss": epoch_loss, "lr": current_lr})
 
             if scheduler: 
                 scheduler.step()
@@ -407,6 +413,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         config.pop("scheduler", None)
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
+        weight_decay = config.pop('weight_decay', None)
         
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
@@ -435,6 +442,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         with open(path / "extras.pkl", 'rb') as f: 
             optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
+
 
         model.optimizer_cls = optimizer_cls 
         model.optimizer_kwargs = optimizer_kwargs 
