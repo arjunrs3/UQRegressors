@@ -7,6 +7,7 @@ import json
 import pickle
 from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
 from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler
+import numpy as np
 
 class ExactGP(gpytorch.models.ExactGP): 
     """
@@ -193,7 +194,7 @@ class BBMM_GP:
 
             if scheduler is not None:
                 scheduler.step()
-            if epoch % int(self.epochs / self.logging_frequency) == 0:
+            if epoch % int(np.ceil(self.epochs / self.logging_frequency)) == 0:
                 logger.log({"epoch": epoch, "train_loss": loss})
         
         self._loggers.append(logger)

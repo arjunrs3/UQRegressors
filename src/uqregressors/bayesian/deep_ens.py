@@ -240,7 +240,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss.item()
             
-            if epoch % int(self.epochs / self.logging_frequency) == 0:
+            if epoch % int(np.ceil(self.epochs / self.logging_frequency)) == 0:
                 current_lr = optimizer.param_groups[0]['lr']
                 logger.log({"epoch": epoch, "train_loss": epoch_loss, "lr": current_lr})
 

@@ -212,7 +212,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss.item()
             
-            if epoch % int(self.epochs / self.logging_frequency) == 0:
+            if int(np.ceil(self.epochs / self.logging_frequency)) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
             if scheduler: 

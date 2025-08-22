@@ -246,7 +246,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             if scheduler is not None:
                 scheduler.step()
 
-            if epoch % int(self.epochs / self.logging_frequency) == 0:
+            if epoch % int(np.ceil(self.epochs / self.logging_frequency)) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
         self.model.eval()
