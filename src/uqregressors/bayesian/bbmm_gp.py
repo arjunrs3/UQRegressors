@@ -57,6 +57,7 @@ class BBMM_GP:
         output_scaler (object or None): Scaler for target values.
         random_seed (int or None): Random seed for reproducibility.
         tuning_loggers (List[Logger]): Optional list of loggers from hyperparameter tuning.
+        logging_frequency (int): the number of times to log training results during training
 
     Attributes: 
         _loggers (list): Logger of training loss.
@@ -84,6 +85,7 @@ class BBMM_GP:
                  output_scaler = None, 
                  random_seed=None, 
                  tuning_loggers=[],
+                 logging_frequency=20,
             ):
         self.name = name
         self.kernel = kernel 
@@ -105,6 +107,7 @@ class BBMM_GP:
         self.random_seed = random_seed
 
         self._loggers = []
+        self.logging_frequency = logging_frequency
         self.training_logs = None 
         self.tuning_loggers = tuning_loggers 
         self.tuning_logs = None
@@ -177,6 +180,8 @@ class BBMM_GP:
 
         scheduler = None
         if self.scheduler_cls is not None:
+            if self.scheduler_cls == torch.optim.lr_scheduler.CosineAnnealingLR: 
+                self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
         for epoch in range(self.epochs): 
@@ -188,7 +193,7 @@ class BBMM_GP:
 
             if scheduler is not None:
                 scheduler.step()
-            if epoch % int(self.epochs / 20) == 0:
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
                 logger.log({"epoch": epoch, "train_loss": loss})
         
         self._loggers.append(logger)

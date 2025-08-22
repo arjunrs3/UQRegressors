@@ -88,6 +88,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         output_scaler (TorchStandardScaler): Scaler for target outputs.
         random_seed (int or None): Random seed for reproducibility.
         tuning_loggers (list): Optional list of loggers for tuning.
+        logging_frequency (int): Number of times to log training results during training.
 
     Attributes: 
         quantiles (Tensor): The lower and upper quantiles for prediction.
@@ -124,7 +125,8 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             input_scaler = None, 
             output_scaler = None,
             random_seed=None, 
-            tuning_loggers = []
+            tuning_loggers = [], 
+            logging_frequency = 20, 
     ):
         self.name = name
         self.n_estimators = n_estimators
@@ -162,6 +164,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
+        self.logging_frequency = logging_frequency
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
@@ -223,7 +226,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss 
             
-            if epoch % int(self.epochs / 20) == 0:
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
                 current_lr = optimizer.param_groups[0]['lr']
                 logger.log({"epoch": epoch, "train_loss": epoch_loss, "lr": current_lr})
 

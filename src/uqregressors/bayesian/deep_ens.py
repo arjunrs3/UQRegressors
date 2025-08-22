@@ -92,6 +92,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         input_scaler (object or None): Scaler for input features.
         output_scaler (object or None): Scaler for target values.
         tuning_loggers (list): List of tuning loggers.
+        logging_frequency (int): Number of times to log training results during training.
 
     Attributes:
         models (list): List of trained PyTorch MLP models.
@@ -127,6 +128,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         input_scaler=None,
         output_scaler=None, 
         tuning_loggers = [],
+        logging_frequency=20, 
     ):
         self.name=name
         self.n_estimators = n_estimators
@@ -160,6 +162,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = []
+        self.logging_frequency = logging_frequency
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
@@ -237,7 +240,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss.item()
             
-            if epoch % int(self.epochs / 20) == 0:
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
                 current_lr = optimizer.param_groups[0]['lr']
                 logger.log({"epoch": epoch, "train_loss": epoch_loss, "lr": current_lr})
 

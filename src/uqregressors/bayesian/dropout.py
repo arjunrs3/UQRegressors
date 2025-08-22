@@ -96,6 +96,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         input_scaler (Optional[TorchStandardScaler]): Custom input scaler.
         output_scaler (Optional[TorchStandardScaler]): Custom output scaler.
         tuning_loggers (List[Logger]): External loggers returned from hyperparameter tuning.
+        logging_frequency (int): Number of times to log training results during training
 
     Attributes:
         model (MLP): Trained PyTorch MLP model.
@@ -133,7 +134,8 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         scale_data=True, 
         input_scaler=None,
         output_scaler=None, 
-        tuning_loggers = []
+        tuning_loggers = [], 
+        logging_frequency = 20,
     ):
         self.name=name
         self.hidden_sizes = hidden_sizes
@@ -168,6 +170,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         self.output_scaler = output_scaler or TorchStandardScaler()
 
         self._loggers = [] 
+        self.logging_frequency = logging_frequency
         self.training_logs = None
         self.tuning_loggers = tuning_loggers 
         self.tuning_logs = None
@@ -252,7 +255,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
             if scheduler is not None:
                 scheduler.step()
 
-            if epoch % (self.epochs / 20) == 0:
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
         logger.finish()

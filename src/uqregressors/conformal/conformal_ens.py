@@ -89,6 +89,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         input_scaler (TorchStandardScaler): Scaler for input features.
         output_scaler (TorchStandardScaler): Scaler for target outputs.
         tuning_loggers (list): Optional list of loggers for tuning.
+        logging_frequency (int): Number of times to log training results during training
 
     Attributes: 
         models (list[QuantNN]): A list of the models in the ensemble.
@@ -125,7 +126,8 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                  scale_data=True, 
                  input_scaler=None,
                  output_scaler=None,
-                 tuning_loggers = []
+                 tuning_loggers = [], 
+                 logging_frequency = 20,
     ): 
         self.name = name
         self.n_estimators = n_estimators
@@ -164,7 +166,8 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
         self.models = []
         self.residuals = []
 
-        self._loggers = []
+        self._loggers = [], 
+        self.logging_frequency = logging_frequency 
         self.training_logs = None
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
@@ -209,7 +212,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
                 optimizer.step() 
                 epoch_loss += loss.item()
             
-            if epoch % (self.epochs / 20) == 0:
+            if epoch % int(self.epochs / self.logging_frequency) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
             if scheduler: 
