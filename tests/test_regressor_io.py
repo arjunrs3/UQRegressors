@@ -10,6 +10,8 @@ from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.bayesian.gaussian_process import GPRegressor
 from uqregressors.bayesian.bbmm_gp import BBMM_GP
+from uqregressors.conformal.conformal_wrapper import ConformalWrapper
+from uqregressors.conformal.conformal_quantile_ensemble import ConformalQuantileEnsemble
 
 def generate_data(n_samples=100, n_features=5):
     X = np.random.randn(n_samples, n_features)
@@ -43,6 +45,8 @@ def check_output_type_and_shape(output, expected_shape, requires_grad):
 
 # List of regressors to test
 regressors_to_test = [
+    (ConformalQuantileEnsemble, "ConformalQuantileEns"),
+    (ConformalWrapper, "ConformalWrapper"),
     (DeepEnsembleRegressor, "DeepEnsembleRegressor"), 
     (ConformalEnsRegressor, "ConformalEnsRegressor"),
     (ConformalQuantileRegressor, "ConformalQuantileRegressor"),
@@ -62,7 +66,10 @@ def test_regressor_io_types_and_shapes(regressor_class, regressor_name, input_ty
 
     # Instantiate regressor
     try:
-        reg = regressor_class(epochs=1, requires_grad=requires_grad, random_seed=42)
+        if regressor_class == ConformalWrapper: 
+            reg = regressor_class(underlying_regressor=DeepEnsembleRegressor(epochs=1, requires_grad=requires_grad, random_seed=42))
+        else: 
+            reg = regressor_class(epochs=1, requires_grad=requires_grad, random_seed=42)
     except TypeError:
         # Fallback if requires_grad is not supported
         reg = regressor_class(epochs=1, random_seed=42)

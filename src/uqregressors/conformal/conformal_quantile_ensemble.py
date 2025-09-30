@@ -1,30 +1,25 @@
 """
-K-Fold-CQR
-----------
-
-This module implements conformal quantile regression in a K-fold manner for regression of a one dimensional output. 
-
-Key features are: 
-    - Customizable neural network architecture
-    - Tunable quantiles of the underyling regressors
-    - Prediction intervals without distributional assumptions 
-    - Parallel training of ensemble models with Joblib 
-    - Customizable optimizer and loss function 
-    - Optional Input/Output Normalization 
+Conformal Quantile Ensemble 
+---------------------------
+Performs the deep ensemble paradigm with quantile regressors instead of mean and variance predictors 
+Wraps this underlying predictor with conformal prediction to provide statistical guarantees. 
 """
+
 import numpy as np 
 import torch 
 import torch.nn as nn 
 from torch.utils.data import TensorDataset, DataLoader 
-from sklearn.base import BaseEstimator, RegressorMixin 
 from uqregressors.utils.activations import get_activation 
-from uqregressors.utils.logging import Logger
 from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
-from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler, TorchKFold
+from uqregressors.utils.logging import Logger
 from joblib import Parallel, delayed 
+import pickle 
 from pathlib import Path 
-import json 
-import pickle
+from sklearn.base import BaseEstimator, RegressorMixin 
+from uqregressors.utils.torch_sklearn_utils import train_test_split, TorchStandardScaler
+import scipy.stats as st
+import json
+import copy 
 
 class QuantNN(nn.Module): 
     """
@@ -52,111 +47,68 @@ class QuantNN(nn.Module):
 
     def forward(self, x):
         return self.model(x)
-    
 
-class KFoldCQR(BaseEstimator, RegressorMixin): 
-    """
-    K-Fold Conformalized Quantile Regressor for uncertainty estimation in regression tasks.
-
-    This class trains an ensemble of quantile neural networks using K-Fold cross-validation,
-    and applies conformal prediction to calibrate prediction intervals.
-
-    Args:
-        name (str): Name of the model.
-        n_estimators (int): Number of K-Fold models to train.
-        hidden_sizes (list): Sizes of the hidden layers for each quantile regressor.
-        dropout (float or None): Dropout rate for the neural network layers.
-        alpha (float): Miscoverage rate (1 - confidence level).
-        requires_grad (bool): Whether inputs should require gradient.
-        tau_lo (float): Lower quantile, defaults to alpha/2.
-        n_jobs (int): Number of parallel jobs for training.
-        activation_str (str): String identifier of the activation function.
-        learning_rate (float): Learning rate for training.
-        epochs (int): Number of training epochs.
-        batch_size (int): Batch size for training.
-        optimizer_cls (type): Optimizer class.
-        optimizer_kwargs (dict): Keyword arguments for optimizer.
-        scheduler_cls (type or None): Learning rate scheduler class.
-        scheduler_kwargs (dict): Keyword arguments for scheduler.
-        loss_fn (callable or None): Loss function, defaults to quantile loss.
-        device (str): Device to use for training and inference.
-        use_wandb (bool): Whether to log training with Weights & Biases.
-        wandb_project (str or None): wandb project name.
-        wandb_run_name (str or None): wandb run name.
-        scale_data (bool): Whether to normalize input/output data.
-        input_scaler (TorchStandardScaler): Scaler for input features.
-        output_scaler (TorchStandardScaler): Scaler for target outputs.
-        random_seed (int or None): Random seed for reproducibility.
-        tuning_loggers (list): Optional list of loggers for tuning.
-        logging_frequency (int): Number of times to log training results during training.
-
-    Attributes: 
-        quantiles (Tensor): The lower and upper quantiles for prediction.
-        models (list[QuantNN]): A list of the models in the ensemble.
-        residuals (Tensor): The combined residuals on the calibration sets. 
-        conformal_width (Tensor): The width needed to conformalize the quantile regressor, q. 
-        _loggers (list[Logger]): Training loggers for each ensemble member. 
-        fitted (bool): Whether fit has been successfully called. 
-    """
-    def __init__(
-            self, 
-            name="K_Fold_CQR_Regressor",
-            n_estimators=5,
-            hidden_sizes=[64, 64], 
-            dropout = None,
-            alpha=0.1, 
-            requires_grad=False,
-            tau_lo = None, 
-            n_jobs=1, 
-            activation_str="ReLU",
-            learning_rate=1e-3,
-            epochs=200,
-            batch_size=32,
-            optimizer_cls=torch.optim.Adam,
-            optimizer_kwargs=None,
-            scheduler_cls=None,
-            scheduler_kwargs=None,
-            loss_fn=None,
-            device="cpu",
-            use_wandb=False,
-            wandb_project=None,
-            wandb_run_name=None,
-            scale_data = True, 
-            input_scaler = None, 
-            output_scaler = None,
-            random_seed=None, 
-            tuning_loggers = [], 
-            logging_frequency = 20, 
-    ):
-        self.name = name
-        self.n_estimators = n_estimators
-        self.hidden_sizes = hidden_sizes
+class ConformalQuantileEnsemble(BaseEstimator, RegressorMixin): 
+    def __init__(self, 
+                 name="Conformal_Quantile_Ensemble_Regressor", 
+                 n_estimators=5, 
+                 cal_size=0.3,
+                 hidden_sizes = [64, 64], 
+                 dropout = None, 
+                 alpha=0.1, 
+                 requires_grad=False, 
+                 tau_lo=None, 
+                 n_jobs=1, 
+                 activation_str="ReLU",
+                 learning_rate=1e-3,
+                 epochs=200, 
+                 batch_size=32, 
+                 optimizer_cls=torch.optim.Adam,
+                 optimizer_kwargs=None,
+                 scheduler_cls=None,
+                 scheduler_kwargs=None,
+                 loss_fn=None,
+                 device="cpu", 
+                 use_wandb=False, 
+                 wandb_project=None, 
+                 wandb_run_name=None,
+                 scale_data=True, 
+                 input_scaler=None, 
+                 output_scaler=None,
+                 random_seed=None,
+                 tuning_loggers=[],
+                 logging_frequency=20,
+    ): 
+        self.name = name 
+        self.n_estimators = n_estimators 
+        self.cal_size = cal_size
+        self.hidden_sizes = hidden_sizes 
         self.dropout = dropout
-        self.alpha = alpha
-        self.requires_grad = requires_grad
-        self.tau_lo = tau_lo or alpha / 2 
-        self.activation_str = activation_str
-        self.learning_rate = learning_rate
+        self.alpha = alpha 
+        self.requires_grad = requires_grad 
+        self.tau_lo = tau_lo or alpha / 2
+        self.n_jobs = n_jobs 
+        self.activation_str = activation_str 
+        self.learning_rate = learning_rate 
         self.epochs = epochs
-        self.batch_size = batch_size
-        self.optimizer_cls = optimizer_cls
+        self.batch_size = batch_size 
+        self.optimizer_cls = optimizer_cls 
         self.optimizer_kwargs = optimizer_kwargs or {}
-        self.scheduler_cls = scheduler_cls
+        self.scheduler_cls = scheduler_cls 
         self.scheduler_kwargs = scheduler_kwargs or {}
         self.loss_fn = loss_fn or self.quantile_loss
-        self.device = device
-
-        self.use_wandb = use_wandb
-        self.wandb_project = wandb_project
-        self.wandb_run_name = wandb_run_name
-
-        self.n_jobs = n_jobs
-        self.random_seed = random_seed
+        self.device = device 
+        self.use_wandb = use_wandb 
+        self.wandb_project = wandb_project 
+        self.wandb_run_name = wandb_run_name 
+        self.n_jobs = n_jobs 
+        self.random_seed = random_seed 
         self.quantiles = torch.tensor([self.tau_lo, 1-self.tau_lo], device=self.device)
-        self.models = []
+        self.models = [] 
         self.residuals = []
-        self.conformal_width = None
-        self.input_dim = None
+        self.conformal_width = None 
+        self.input_dim = None 
+
         if self.n_estimators == 1: 
             raise ValueError("n_estimators set to 1. To use a single Quantile Regressor, use a non-ensembled Quantile Regressor class")
         self.scale_data = scale_data 
@@ -183,8 +135,8 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         """
         error = y.view(-1, 1) - preds
         return torch.mean(torch.max(self.quantiles * error, (self.quantiles - 1) * error))
-
-    def _train_single_model(self, X_tensor, y_tensor, input_dim, train_idx, cal_idx, model_idx): 
+    
+    def _train_single_model(self, X_tensor, y_tensor, input_dim, model_idx):
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed + model_idx)
             np.random.seed(self.random_seed + model_idx)
@@ -201,8 +153,8 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
                 self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
-        X_train = X_tensor.detach()[train_idx]
-        y_train = y_tensor.detach()[train_idx]
+        X_train = X_tensor.detach()
+        y_train = y_tensor.detach()
         dataset = TensorDataset(X_train, y_train)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
@@ -233,48 +185,73 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
             if scheduler: 
                 scheduler.step()
 
-        model.eval()
-        test_X = X_tensor[cal_idx]
-        test_y = y_tensor[cal_idx]
-        oof_preds = model(test_X)
-        loss_matrix =(oof_preds - test_y) * torch.tensor([1.0, -1.0], device=self.device)
-        residuals = torch.max(loss_matrix, dim=1).values
         logger.finish()
-        return model, residuals, logger
+        return model, logger
     
     def fit(self, X, y): 
         """
-        Fit the ensemble on training data.
+        Fit and conformalize the ensemble on training data. 
 
-        Args:
-            X (array-like or torch.Tensor): Training inputs.
-            y (array-like or torch.Tensor): Training targets.
+        Args: 
+            X (array-like or torch.Tensor): Training inputs. 
+            y (array-like or torch.Tensor): Training targets 
 
-        Returns:
+        Returns: 
             (KFoldCQR): Fitted estimator.
         """
-        X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
+        X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device)
         input_dim = X_tensor.shape[1]
         self.input_dim = input_dim
-
 
         if self.scale_data:
             X_tensor = self.input_scaler.fit_transform(X_tensor)
             y_tensor = self.output_scaler.fit_transform(y_tensor)
 
-        kf = TorchKFold(n_splits=self.n_estimators, shuffle=True)
+        X_train, X_cal, y_train, y_cal = train_test_split(X_tensor, y_tensor, test_size=self.cal_size, device=self.device, random_state=self.random_seed)
 
-        results = Parallel(n_jobs=self.n_jobs)(
-            delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, train_idx, cal_idx, i)
-            for i, (train_idx, cal_idx) in enumerate(kf.split(X_tensor))
-        )
-
+        if self.n_jobs != 1: 
+            results = Parallel(n_jobs=self.n_jobs)(
+                delayed(self._train_single_model)(X_train, y_train, input_dim, i) for i in range(self.n_estimators)
+            )
+        
+        else: 
+            results = []
+            for i in range(self.n_estimators): 
+                results.append(self._train_single_model(X_train, y_train, input_dim, i))
+        
         self.models = [result[0] for result in results]
-        self.residuals = torch.cat([result[1] for result in results], dim=0).ravel()
-        self._loggers = [result[2] for result in results]
+        self._loggers = [result[1] for result in results]
 
-        self.fitted = True
-        return self
+        preds = [] 
+        for i, model in enumerate(self.models): 
+            model.eval() 
+            pred = model(X_cal)
+            preds.append(pred)
+
+        preds = torch.stack(preds)
+        lbs = preds[:, :, 0]
+        ubs = preds[:, :, 1]
+
+        mean_lb = torch.mean(lbs, dim=0)
+        mean_ub = torch.mean(ubs, dim=0)
+
+        var_lb = torch.var(lbs, dim=0).squeeze() 
+        var_ub = torch.var(ubs, dim=0).squeeze() 
+
+        std_lb = var_lb.sqrt() 
+        std_ub = var_ub.sqrt()
+
+        std_mult = torch.tensor(st.norm.ppf(1 - self.alpha / 2), device=self.device)
+
+        modified_lbs = mean_lb - std_lb * std_mult 
+        modified_ubs = mean_ub + std_ub * std_mult  
+
+        oof_preds = torch.stack((modified_lbs, modified_ubs), dim=1)
+        loss_matrix = (oof_preds - y_cal) * torch.tensor([1.0, -1.0], device=self.device)
+        residuals = torch.max(loss_matrix, dim=1).values 
+        self.residuals = residuals
+        self.fitted = True 
+        return self 
     
     def predict(self, X): 
         """
@@ -317,15 +294,21 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
                 preds.append(pred)
 
         preds = torch.stack(preds)
-
-        means = torch.mean(preds, dim=2) 
-        mean = torch.mean(means, dim=0)
- 
         lower_cq = torch.mean(preds[:, :, 0], dim=0)
-        upper_cq = torch.mean(preds[:, :, 1], dim=0)
+        lower_var = torch.var(preds[:, :, 0], dim=0)
+        lower_std = lower_var.sqrt()
+        std_mult = torch.tensor(st.norm.ppf(1 - self.alpha / 2), device=self.device)
 
-        lower = lower_cq - self.conformal_width
-        upper = upper_cq + self.conformal_width
+        upper_cq = torch.mean(preds[:, :, 1], dim=0)
+        upper_var = torch.var(preds[:, :, 1], dim=0)
+        upper_std = upper_var.sqrt() 
+        
+        corrected_lower_cq = lower_cq - std_mult * lower_std 
+        corrected_upper_cq = upper_cq + std_mult * upper_std 
+
+        lower = corrected_lower_cq - self.conformal_width 
+        upper = corrected_upper_cq + self.conformal_width 
+        mean = 1/2 * (lower + upper)
 
         if self.scale_data: 
             mean = self.output_scaler.inverse_transform(mean.view(-1, 1)).squeeze()
@@ -337,7 +320,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
 
         else: 
             return mean, lower, upper
-    
+
     def save(self, path):
         """
         Save the trained model and associated configuration to disk.

@@ -333,7 +333,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["model", "residuals", "conformal_width", "optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", "input_scaler", "output_scaler", "quantiles", 
-                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+                         "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "n_jobs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
@@ -388,6 +388,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         config.pop("scheduler", None)
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
+        config.pop("n_jobs", None)
         weight_decay = config.pop("weight_decay", None)
 
         input_dim = config.pop("input_dim", None)

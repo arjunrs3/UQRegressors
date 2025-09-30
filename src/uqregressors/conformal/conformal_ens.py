@@ -248,7 +248,7 @@ class ConformalEnsRegressor(BaseEstimator, RegressorMixin):
             X_tensor = self.input_scaler.fit_transform(X_tensor)
             y_tensor = self.output_scaler.fit_transform(y_tensor)
 
-        train_idx, cal_idx = self._train_test_split(X_tensor, 0.2, self.random_seed)
+        train_idx, cal_idx = self._train_test_split(X_tensor, self.cal_size, self.random_seed)
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(self._train_single_model)(X_tensor, y_tensor, input_dim, train_idx, cal_idx, i)
             for i in range(self.n_estimators)

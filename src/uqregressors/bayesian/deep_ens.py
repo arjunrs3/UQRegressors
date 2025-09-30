@@ -91,6 +91,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         scale_data (bool): Whether to scale input and output data.
         input_scaler (object or None): Scaler for input features.
         output_scaler (object or None): Scaler for target values.
+        defective_models (list): List of model indices to ignore during testing. 
         tuning_loggers (list): List of tuning loggers.
         logging_frequency (int): Number of times to log training results during training.
 
@@ -127,6 +128,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         scale_data=True, 
         input_scaler=None,
         output_scaler=None, 
+        defective_models=[], 
         tuning_loggers = [],
         logging_frequency=20, 
     ):
@@ -161,6 +163,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             self.input_scaler = input_scaler or TorchStandardScaler()
             self.output_scaler = output_scaler or TorchStandardScaler()
 
+        self.defective_models = defective_models
         self._loggers = []
         self.logging_frequency = logging_frequency
         self.training_logs = None
@@ -305,10 +308,13 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
 
         preds = [] 
 
-        for model in self.models: 
-            model.eval()
-            pred = model(X_tensor)
-            preds.append(pred)
+        for i, model in enumerate(self.models):
+            if i not in self.defective_models:  
+                model.eval()
+                pred = model(X_tensor)
+                preds.append(pred)
+            else: 
+                print(f"model {i} in defective model list, so not being used for prediction")
 
         preds = torch.stack(preds)
 
@@ -334,6 +340,42 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
 
         else: 
             return mean, lower, upper
+
+    def return_last_layer_grads(self, X, epsilon=1e-6): 
+        X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=True)
+        if self.scale_data: 
+            X_tensor = self.input_scaler.transform(X_tensor)
+
+        grads_list = [] 
+
+        for model in self.models: 
+            model.eval() 
+            with torch.no_grad(): 
+                pred = model(X_tensor)
+                pseudo_y = pred[:, 0] + epsilon 
+
+            model.train() 
+            model.zero_grad() 
+
+            pred = model(X_tensor)
+            loss = self.nll_loss(pred, pseudo_y)
+            loss.backward() 
+
+            last_linear = None 
+            for layer in reversed(model.model): 
+                if isinstance(layer, nn.Linear): 
+                    last_linear = layer 
+                    break 
+
+            assert last_linear is not None, "No final linear layer found" 
+            
+            grad_w = last_linear.weight.grad[0].detach().cpu().flatten() 
+            grad_b = last_linear.bias.grad[0].detach().cpu().flatten() 
+            grad_vector = torch.cat([grad_w, grad_b])
+
+            grads_list.append(grad_vector)
+
+        return grads_list
 
     def save(self, path):
         """

@@ -336,7 +336,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         config = {
             k: v for k, v in self.__dict__.items()
             if k not in ["optimizer_cls", "optimizer_kwargs", "scheduler_cls", "scheduler_kwargs", "input_scaler", 
-                         "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs"]
+                         "output_scaler", "_loggers", "training_logs", "tuning_loggers", "tuning_logs", "n_jobs"]
             and not callable(v)
             and not isinstance(v, (torch.nn.Module,))
         }
@@ -386,7 +386,7 @@ class MCDropoutRegressor(BaseEstimator, RegressorMixin):
         config.pop("scheduler", None)
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
-        
+        config.pop("n_jobs", None)
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
         weight_decay = config.pop("weight_decay", None)
