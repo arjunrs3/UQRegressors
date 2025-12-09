@@ -4,7 +4,7 @@
 
 # UQRegressors
 
-**UQRegressors** is a Python library for regression models that provide **prediction intervals**, in addition to point estimates. It is meant for machine learning applications where quantifying uncertainty is important. 
+**UQRegressors** is a Python library for regression models that provide **prediction intervals**, in addition to point estimates. It is meant for machine learning applications where quantifying uncertainty is important. Full documentation is available at: https://arjunrs3.github.io/UQRegressors/.
 
 It features **highly customizable** parameters for each model, an **easy to use** interface with built-in dataset validation, **GPU compatibility** with a PyTorch backend, **validated implementations** with comparisons to published results, **easy saving and loading** of created models, and a **wide variety of metrics and visualization** tools available to assess model quality. 
 
