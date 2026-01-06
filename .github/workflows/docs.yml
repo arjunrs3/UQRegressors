@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies 
         run: | 
-          pip install mkdocs jupyter nbconvert 
+          pip install mkdocs mkdocs-material pymdown-extensions python-markdown-math mkdocstrings-python mkdocs-jupyter jupyter nbconvert 
 
       - name: Build docs 
         run: | 
