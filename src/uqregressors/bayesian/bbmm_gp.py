@@ -336,6 +336,7 @@ class BBMM_GP:
         config.pop("scheduler", None)
         config.pop("n_jobs", None)
         fitted = config.pop("fitted", False)
+        input_dim = config.pop("input_dim", None)
         weight_decay = config.pop("weight_decay", None)
         model = cls(**config)
 
@@ -356,6 +357,7 @@ class BBMM_GP:
         model.fitted = fitted
         model.input_scaler = input_scaler 
         model.output_scaler = output_scaler
+        model.input_dim = input_dim 
 
         if load_logs: 
             logs_path = path / "logs"

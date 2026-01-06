@@ -469,12 +469,15 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         config.pop("output_scaler", None)
         weight_decay = config.pop('weight_decay', None)
         
+
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
+        n_gradients = config.pop("n_gradients", None)
         model = cls(**config)
 
         # Recreate models
         model.input_dim = input_dim
+        model.n_gradients = n_gradients
         activation = get_activation(config["activation_str"])
         model.models = []
         for i in range(config["n_estimators"]):

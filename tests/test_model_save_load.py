@@ -11,7 +11,7 @@ from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.bayesian.gaussian_process import GPRegressor
 from uqregressors.conformal.conformal_wrapper import ConformalWrapper
-from uqregressors.conformal.conformal_quantile_ensemble import ConformalQuantileEnsemble
+from uqregressors.conformal.conformal_quantile_ens import ConformalQuantileEnsemble
 from uqregressors.bayesian.bbmm_gp import BBMM_GP
 from uqregressors.utils.file_manager import FileManager
 

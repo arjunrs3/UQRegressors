@@ -43,6 +43,7 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.envs.default]
+python = "3.12"
 dependencies = [
   "pytest",
   "black",
@@ -65,5 +66,5 @@ line-length = 88
 line-length = 88
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 ignore_missing_imports = true
