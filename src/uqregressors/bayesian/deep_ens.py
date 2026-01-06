@@ -170,6 +170,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
         self.fitted = False
+        self.n_gradients = 2 * self.n_estimators
 
     def nll_loss(self, preds, y): 
         """
@@ -341,25 +342,34 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         else: 
             return mean, lower, upper
 
-    def return_last_layer_grads(self, X, epsilon=1e-6): 
+    def return_last_layer_grads(self, X): 
+        if self.requires_grad: 
+            requires_grad_flag = False 
+        else: 
+            self.requires_grad = True
+            requires_grad_flag = True 
+
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=True)
         if self.scale_data: 
             X_tensor = self.input_scaler.transform(X_tensor)
+
+        _, pseudo_y, _ = self.predict(X_tensor)
+        pseudo_y = pseudo_y.detach()
+        if self.scale_data: 
+            pseudo_y = self.output_scaler.transform(pseudo_y)
 
         grads_list = [] 
 
         for model in self.models: 
             model.eval() 
-            with torch.no_grad(): 
-                pred = model(X_tensor)
-                pseudo_y = pred[:, 0] + epsilon 
-
-            model.train() 
             model.zero_grad() 
 
-            pred = model(X_tensor)
+            X_tensor_grad = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=True)
+            if self.scale_data: 
+                X_tensor_grad = self.input_scaler.transform(X_tensor_grad)
+
+            pred = model(X_tensor_grad)
             loss = self.nll_loss(pred, pseudo_y)
-            loss.backward() 
 
             last_linear = None 
             for layer in reversed(model.model): 
@@ -368,12 +378,21 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
                     break 
 
             assert last_linear is not None, "No final linear layer found" 
-            
-            grad_w = last_linear.weight.grad[0].detach().cpu().flatten() 
-            grad_b = last_linear.bias.grad[0].detach().cpu().flatten() 
-            grad_vector = torch.cat([grad_w, grad_b])
 
-            grads_list.append(grad_vector)
+            grad_w, grad_b = torch.autograd.grad(
+                outputs=loss, 
+                inputs=[last_linear.weight, last_linear.bias], 
+                create_graph=True, 
+                retain_graph=True
+            )
+
+            for i in range(2):
+                grad_vector = torch.cat([grad_w[i].flatten(), grad_b[i].flatten()], dim=0)
+                grad_vector = grad_vector / (grad_vector.norm() + 1e-8)
+                grads_list.append(grad_vector)
+    
+        if requires_grad_flag: 
+            self.requires_grad = False 
 
         return grads_list
 
@@ -447,6 +466,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         config.pop("input_scaler", None)
         config.pop("output_scaler", None)
         weight_decay = config.pop("weight_decay", None)
+        n_gradients = config.pop("n_gradients", None)
 
         input_dim = config.pop("input_dim", None)
         fitted = config.pop("fitted", False)
@@ -472,6 +492,7 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         model.input_scaler = input_scaler 
         model.output_scaler = output_scaler
         model.fitted = fitted
+        model.n_gradients = n_gradients
 
         if load_logs: 
             logs_path = path / "logs"

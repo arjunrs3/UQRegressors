@@ -106,6 +106,7 @@ class BBMM_GP:
         self.wandb_run_name = wandb_run_name
         self.model = None
         self.random_seed = random_seed
+        self.input_dim = None
 
         self._loggers = []
         self.logging_frequency = logging_frequency
@@ -131,7 +132,7 @@ class BBMM_GP:
             y (np.ndarray or torch.Tensor): Training targets of shape (n_samples,).
         """
         X_tensor, y_tensor = validate_and_prepare_inputs(X, y, device=self.device, requires_grad=self.requires_grad)
-
+        self.input_dim = X_tensor.shape[1]
         if self.scale_data:
             if self.requires_grad:
                 # Use clone to avoid in-place operations that break gradient flow
@@ -233,14 +234,13 @@ class BBMM_GP:
         self.model.eval()
         self.likelihood.eval() 
 
-        with torch.no_grad(), gpytorch.settings.fast_pred_var(): 
+        with gpytorch.settings.fast_pred_var(False): 
             preds = self.likelihood(self.model(X_tensor))
-
-        with torch.no_grad(): 
             mean = preds.mean
-            lower_2std, upper_2std = preds.confidence_region() 
-            low_std, up_std = (mean - lower_2std) / 2, (upper_2std - mean) / 2 
-
+            std = preds.variance.sqrt() 
+            #low_std, up_std = (mean - lower_2std) / 2, (upper_2std - mean) / 2 
+            low_std, up_std = std, std 
+            
         z_score = st.norm.ppf(1 - self.alpha / 2)
         lower = mean - z_score * low_std
         upper = mean + z_score * up_std

@@ -169,6 +169,7 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
         self.fitted = False 
+        self.n_gradients = 2 * self.n_estimators
 
     def quantile_loss(self, preds, y): 
         """
@@ -338,6 +339,59 @@ class KFoldCQR(BaseEstimator, RegressorMixin):
         else: 
             return mean, lower, upper
     
+    def return_last_layer_grads(self, X): 
+        if self.requires_grad: 
+            requires_grad_flag = False 
+        else: 
+            self.requires_grad = True
+            requires_grad_flag = True 
+        X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=True) 
+        if self.scale_data: 
+            X_tensor = self.input_scaler.transform(X_tensor)
+        
+        _, pseudo_y, _ = self.predict(X_tensor)
+        pseudo_y = pseudo_y.detach()
+        if self.scale_data: 
+            pseudo_y = self.output_scaler.transform(pseudo_y)
+
+
+        grads_list = [] 
+        for model in self.models: 
+            model.eval() 
+
+            model.zero_grad() 
+
+            X_tensor_grad = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=True)
+            if self.scale_data: 
+                X_tensor_grad = self.input_scaler.transform(X_tensor_grad)
+            pred = torch.mean(model(X_tensor_grad))
+            loss = self.quantile_loss(pred, pseudo_y)
+
+            last_linear = None 
+            for layer in reversed(model.model): 
+                if isinstance(layer, nn.Linear): 
+                    last_linear = layer 
+                    break 
+
+            assert last_linear is not None, "No final linear layer found" 
+
+            grad_w, grad_b = torch.autograd.grad(
+                outputs=loss, 
+                inputs=[last_linear.weight, last_linear.bias], 
+                create_graph=True, 
+                retain_graph=True
+            )
+
+            for i in range(2): 
+                grad_vector = torch.cat([grad_w[i].flatten(), grad_b[i].flatten()], dim=0)
+                grad_vector = grad_vector / (grad_vector.norm() + 1e-8)
+                grads_list.append(grad_vector)
+        
+        if requires_grad_flag: 
+            self.requires_grad = False 
+
+        return grads_list
+
     def save(self, path):
         """
         Save the trained model and associated configuration to disk.
