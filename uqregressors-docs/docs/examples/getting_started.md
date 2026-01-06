@@ -172,7 +172,7 @@ deep_ens = DeepEnsembleRegressor(
     hidden_sizes=[100, 100],
     alpha=0.1,
     scale_data=True,
-    epochs=1000,
+    epochs=100,
     learning_rate=1e-3,
     device="cpu", 
     n_jobs=1, # Experimental: Number of parallel jobs using joblib
@@ -180,64 +180,76 @@ deep_ens = DeepEnsembleRegressor(
 
 deep_ens.fit(X_train, y_train)
 deep_ens_sol = deep_ens.predict(X_test)
+```
 
+
+```python
 plot_uncertainty_results(*deep_ens_sol, "Deep Ensemble Regressor")
 ```
 
 
     
-![png](getting_started_files/getting_started_7_0.png)
+![png](getting_started_files/getting_started_8_0.png)
     
 
 
-### Standard Gaussian Process Regression (GPR)
+### Gaussian Process (single Lengthscale)
 
 
 ```python
-from uqregressors.bayesian.gaussian_process import GPRegressor
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel
+from uqregressors.bayesian.gp import GP
+import gpytorch
 
-gp_kwargs = {"normalize_y": True}
-gpr = GPRegressor(
-    kernel= RBF(length_scale=0.2, length_scale_bounds=(0.05, 1)) + WhiteKernel(noise_level=1), # Kernel function supported by sklearn
-    alpha=0.1, 
-    gp_kwargs=gp_kwargs # keyword arguments to sklearn's GPRegressor
-    )
+gp = GP(kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel()), # gpytorch kernel
+                           likelihood=gpytorch.likelihoods.GaussianLikelihood(), # gpytorch likelihood
+                           alpha = 0.1,
+                           epochs=1000,
+                           learning_rate=1,
+                           device="cpu",
+                           use_wandb=False)
 
-gpr.fit(X_train, y_train)
-gp_sol = gpr.predict(X_test)
+gp.fit(X_train, y_train)
+gp_sol = gp.predict(X_test)
+```
+
+
+```python
 plot_uncertainty_results(*gp_sol, "Gaussian Process Regressor")
 ```
 
 
     
-![png](getting_started_files/getting_started_9_0.png)
+![png](getting_started_files/getting_started_11_0.png)
     
 
 
-### BBMM Gaussian Process
+## Gaussian Process (ARD - one lengthscale per input dimension)
 
 
 ```python
-from uqregressors.bayesian.bbmm_gp import BBMM_GP
+from uqregressors.bayesian.gp import GP
 import gpytorch
 
-bbmm_gp = BBMM_GP(kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel()), # gpytorch kernel
+ARD_gp = GP(kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=1, has_lengthscale=True)), # gpytorch kernel with ARD
                            likelihood=gpytorch.likelihoods.GaussianLikelihood(), # gpytorch likelihood
                            alpha = 0.1,
                            epochs=1000,
-                           learning_rate=1e-1,
+                           learning_rate=1,
                            device="cpu",
                            use_wandb=False)
 
-bbmm_gp.fit(X_train, y_train)
-bbmm_gp_sol = bbmm_gp.predict(X_test)
-plot_uncertainty_results(*bbmm_gp_sol, "BBMM Gaussian Process Regressor")
+ARD_gp.fit(X_train, y_train)
+ARD_gp_sol = gp.predict(X_test)
+```
+
+
+```python
+plot_uncertainty_results(*ARD_gp_sol, "ARD Gaussian Process Regressor")
 ```
 
 
     
-![png](getting_started_files/getting_started_11_0.png)
+![png](getting_started_files/getting_started_14_0.png)
     
 
 
@@ -269,7 +281,7 @@ plot_uncertainty_results(*cqr_sol, "Split Conformal Quantile Regression")
 
 
     
-![png](getting_started_files/getting_started_14_0.png)
+![png](getting_started_files/getting_started_17_0.png)
     
 
 
@@ -302,11 +314,11 @@ plot_uncertainty_results(*k_fold_cqr_sol, "K-Fold Conformal Quantile Regression"
 
 
     
-![png](getting_started_files/getting_started_17_0.png)
+![png](getting_started_files/getting_started_20_0.png)
     
 
 
-### Normalized ConformalEns
+### Normalized Conformal Ensemble
 
 
 ```python
@@ -333,7 +345,58 @@ plot_uncertainty_results(*conformal_ens_sol, "Normalized Conformal Ensemble")
 
 
     
-![png](getting_started_files/getting_started_19_0.png)
+![png](getting_started_files/getting_started_22_0.png)
+    
+
+
+### Conformalized Deep Ensemble 
+
+
+```python
+from uqregressors.conformal.conformal_wrapper import ConformalWrapper 
+
+conformalized_deep_ens = ConformalWrapper(
+    underlying_regressor=deep_ens, 
+    cal_size=0.3
+)
+
+conformalized_deep_ens.fit(X_train, y_train)
+conformal_ens_sol = conformalized_deep_ens.predict(X_test)
+
+plot_uncertainty_results(*conformal_ens_sol, "Conformalized Deep Ensemble")
+```
+
+
+    
+![png](getting_started_files/getting_started_24_0.png)
+    
+
+
+### Conformalized Quantile Ensemble
+
+
+```python
+from uqregressors.conformal.conformal_quantile_ens import ConformalQuantileEnsemble
+
+conformalized_quantile_ens = ConformalQuantileEnsemble(n_estimators=5, # Number of models in the ensemble
+    hidden_sizes=[100, 100],
+    alpha=0.1, 
+    tau_lo=0.05, # Lower quantile the underlying regressor is trained for; can be tuned
+    dropout=None,
+    epochs=1000,
+    learning_rate=1e-3,
+    device="cpu",
+    n_jobs=1, # Experimental: number of parallel processes using joblib
+    use_wandb=False)
+
+conformalized_quantile_ens.fit(X_train, y_train)
+conformalized_quantile_ens_sol = conformalized_quantile_ens.predict(X_test)
+plot_uncertainty_results(*conformalized_quantile_ens_sol, "Conformalized Quantile Ensemble")
+```
+
+
+    
+![png](getting_started_files/getting_started_26_0.png)
     
 
 
@@ -352,7 +415,7 @@ sns.set(style="whitegrid", font_scale=1)
 sol_dict = {"MC Dropout": dropout_sol, 
             "Deep Ensemble Regressor": deep_ens_sol, 
             "Standard GP": gp_sol, 
-            "BBMM GP": bbmm_gp_sol, 
+            "ARD GP": ARD_gp_sol, 
             "Split CQR": cqr_sol, 
             "K-fold-CQR": k_fold_cqr_sol, 
             "Normalized Conformal Ens": conformal_ens_sol
@@ -369,7 +432,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_0.png)
+![png](getting_started_files/getting_started_28_0.png)
     
 
 
@@ -379,7 +442,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_2.png)
+![png](getting_started_files/getting_started_28_2.png)
     
 
 
@@ -389,7 +452,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_4.png)
+![png](getting_started_files/getting_started_28_4.png)
     
 
 
@@ -399,7 +462,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_6.png)
+![png](getting_started_files/getting_started_28_6.png)
     
 
 
@@ -409,7 +472,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_8.png)
+![png](getting_started_files/getting_started_28_8.png)
     
 
 
@@ -419,7 +482,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_10.png)
+![png](getting_started_files/getting_started_28_10.png)
     
 
 
@@ -429,7 +492,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_12.png)
+![png](getting_started_files/getting_started_28_12.png)
     
 
 
@@ -439,7 +502,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_14.png)
+![png](getting_started_files/getting_started_28_14.png)
     
 
 
@@ -449,7 +512,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_21_16.png)
+![png](getting_started_files/getting_started_28_16.png)
     
 
 
@@ -493,21 +556,21 @@ plot_cal_curve(des_cov,
                title="Calibration Curve: Dropout")
 ```
 
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp_zma25_5\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpkntl7um3\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp8w3s_uc5\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpjix8a44u\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpad5mm5tn\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpr79nkajn\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpxwxo8guq\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp0y07es5r\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp0u9sh1vx\models\MCDropoutRegressor_20250703_150234
-    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpl6g1sfq1\models\MCDropoutRegressor_20250703_150234
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpyb6dut3u\models\MCDropoutRegressor_20260106_093922
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp3_hqwhtg\models\MCDropoutRegressor_20260106_093922
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpqy2plnf1\models\MCDropoutRegressor_20260106_093922
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpzlw1x_8o\models\MCDropoutRegressor_20260106_093922
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmptlef3ijw\models\MCDropoutRegressor_20260106_093922
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmptm9amqd3\models\MCDropoutRegressor_20260106_093923
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp5ko3e1m_\models\MCDropoutRegressor_20260106_093923
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpx5atsx77\models\MCDropoutRegressor_20260106_093923
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmpcgqbrrq5\models\MCDropoutRegressor_20260106_093923
+    Model and additional artifacts saved to: C:\Users\arsha\AppData\Local\Temp\tmp47clxaz9\models\MCDropoutRegressor_20260106_093923
     
 
 
     
-![png](getting_started_files/getting_started_23_1.png)
+![png](getting_started_files/getting_started_30_1.png)
     
 
 
@@ -542,7 +605,7 @@ plot_pred_vs_true(*dropout_sol,
 
 
     
-![png](getting_started_files/getting_started_25_0.png)
+![png](getting_started_files/getting_started_32_0.png)
     
 
 
@@ -591,6 +654,26 @@ hyperparam_comparison_dict = {"CQR_untuned": cqr_sol,
                               "CQR_tuned": opt_cqr_sol}
 ```
 
+    [I 2026-01-06 09:39:35,708] A new study created in memory with name: no-name-8e89dea0-442a-4ec7-88ec-0b337cba4376
+    
+
+
+      0%|          | 0/5 [00:00<?, ?it/s]
+
+
+    [I 2026-01-06 09:40:31,135] Trial 0 finished with value: 0.2078791856765747 and parameters: {'tau_lo': 0.010650749203251729}. Best is trial 0 with value: 0.2078791856765747.
+    [I 2026-01-06 09:41:30,078] Trial 1 finished with value: 0.22428683936595917 and parameters: {'tau_lo': 0.03480181804167325}. Best is trial 0 with value: 0.2078791856765747.
+    [I 2026-01-06 09:42:29,246] Trial 2 finished with value: 0.20575742423534393 and parameters: {'tau_lo': 0.029717889711319133}. Best is trial 2 with value: 0.20575742423534393.
+    [I 2026-01-06 09:43:29,809] Trial 3 finished with value: 0.18902842700481415 and parameters: {'tau_lo': 0.04106377533378008}. Best is trial 3 with value: 0.18902842700481415.
+    [I 2026-01-06 09:44:33,299] Trial 4 finished with value: 0.17469710111618042 and parameters: {'tau_lo': 0.0632647077141803}. Best is trial 4 with value: 0.17469710111618042.
+    
+
+
+    
+![png](getting_started_files/getting_started_34_3.png)
+    
+
+
 For this simple example, hyperparameter tuning of the quantiles will result in slightly smaller average interval width while maintaining coverage (note that the optimization was not run to convergence, so the interval width may not actually be smaller)
 
 
@@ -608,7 +691,7 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
 
 
     
-![png](getting_started_files/getting_started_29_0.png)
+![png](getting_started_files/getting_started_36_0.png)
     
 
 
@@ -618,7 +701,7 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
 
 
     
-![png](getting_started_files/getting_started_29_2.png)
+![png](getting_started_files/getting_started_36_2.png)
     
 
 

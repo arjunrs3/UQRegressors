@@ -7,7 +7,7 @@ import torch
 import json
 import pickle 
 
-class GPRegressor: 
+class SklearnGP: 
     """
     A wrapper for scikit-learn's GaussianProcessRegressor with prediction intervals.
 

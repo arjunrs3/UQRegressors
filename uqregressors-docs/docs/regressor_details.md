@@ -33,7 +33,12 @@ As an intuitive explanation of this formula, the mean of this normal distributio
 
 This kernel function is used for several desirable properties; namely its infinite dimensional feature space, exponentially decaying value of similarity, and positive definiteness. One limitation of this kernel function is that it implicitly assumes that the underlying function is smooth, and can give uninformative measures of similarity in high dimension, where the Euclidean distance between points tends to concentrate.
 
-This kernel is also strongly dependent on a reasonable choice of the length-scale parameter \(l\), which is often optimized by maximizing the log-likelihood of the training data, \(y\) with gradient based methods. The log-likelihood is written as:
+This kernel is also strongly dependent on a reasonable choice of the length-scale parameter \(l\), which is often optimized by maximizing the log-likelihood of the training data, \(y\) with gradient based methods. 
+
+!!! note "Length Scale Warning"
+    The default implementation of Gaussian Processes in UQRegressors uses a kernel with a single length scale for all dimensions. Better fits can often be obtained with Automatic Relevance Determination (ARD), which chooses a separate lengthscale for each dimension. See the Getting Started example or the GP API for the specific kernel to use for ARD. 
+
+The log-likelihood is written as:
 
 \[
 \log p(y_{tr} | X_{tr}, l) = -\frac{1}{2}y_{tr}^T K^{-1}y_{tr} - \frac{1}{2} \log|K| - C_1

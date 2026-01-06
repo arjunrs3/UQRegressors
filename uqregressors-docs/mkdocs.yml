@@ -43,7 +43,7 @@ nav:
       - Deep Ensembles: api/Bayesian/deep_ens.md
       - Dropout: api/Bayesian/dropout.md 
       - Gaussian Processes: api/Bayesian/gp.md 
-      - Gaussian Process (Black Box Matrix-Matrix Inference): api/Bayesian/bbmm_gp.md
+      - Gaussian Process (sklearn wrapper): api/Bayesian/sklearn_gp.md
     - Conformal: 
       - Conformal Quantile Regression: api/Conformal/cqr.md 
       - K-Fold Conformal Quantile Regression: api/Conformal/k_fold_cqr.md 

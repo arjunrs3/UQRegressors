@@ -8,8 +8,8 @@ from uqregressors.conformal.k_fold_cqr import KFoldCQR
 from uqregressors.conformal.cqr import ConformalQuantileRegressor
 from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.bayesian.dropout import MCDropoutRegressor
-from uqregressors.bayesian.gaussian_process import GPRegressor
-from uqregressors.bayesian.bbmm_gp import BBMM_GP
+from uqregressors.bayesian.sklearn_gp import SklearnGP
+from uqregressors.bayesian.gp import GP
 from uqregressors.conformal.conformal_wrapper import ConformalWrapper
 from uqregressors.conformal.conformal_quantile_ens import ConformalQuantileEnsemble
 
@@ -51,7 +51,7 @@ regressors_to_test = [
     (ConformalEnsRegressor, "ConformalEnsRegressor"),
     (ConformalQuantileRegressor, "ConformalQuantileRegressor"),
     (MCDropoutRegressor, "MCDropoutRegressor"), 
-    (BBMM_GP, "BBMM_GP"), 
+    (GP, "BBMM_GP"), 
     (KFoldCQR, "KFoldCQR")
 ]
 

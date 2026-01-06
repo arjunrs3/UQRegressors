@@ -9,10 +9,10 @@ from uqregressors.conformal.k_fold_cqr import KFoldCQR
 from uqregressors.conformal.cqr import ConformalQuantileRegressor
 from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.bayesian.dropout import MCDropoutRegressor
-from uqregressors.bayesian.gaussian_process import GPRegressor
+from uqregressors.bayesian.sklearn_gp import SklearnGP
 from uqregressors.conformal.conformal_wrapper import ConformalWrapper
 from uqregressors.conformal.conformal_quantile_ens import ConformalQuantileEnsemble
-from uqregressors.bayesian.bbmm_gp import BBMM_GP
+from uqregressors.bayesian.gp import GP
 from uqregressors.utils.file_manager import FileManager
 
 # Set random seed for reproducibility
@@ -32,8 +32,8 @@ def generate_data(n_samples=200, n_features=5):
     (ConformalEnsRegressor, "ConformalEnsRegressor"),
     (ConformalQuantileRegressor, "ConformalQuantileRegressor"),
     (MCDropoutRegressor, "MCDropoutRegressor"), 
-    (GPRegressor, "GaussianProcessRegressor"), 
-    (BBMM_GP, "BBMM_GP"), 
+    (SklearnGP, "GaussianProcessRegressor"), 
+    (GP, "BBMM_GP"), 
     (KFoldCQR, "KFoldCQR")
 ])
 def test_model_save_and_load(regressor_class, regressor_name):
@@ -42,7 +42,7 @@ def test_model_save_and_load(regressor_class, regressor_name):
     X, y = generate_data()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    if regressor_class in [GPRegressor]:
+    if regressor_class in [SklearnGP]:
         reg = regressor_class()
     elif regressor_class == ConformalWrapper: 
          reg = regressor_class(underlying_regressor=DeepEnsembleRegressor(epochs=10, random_seed=42))

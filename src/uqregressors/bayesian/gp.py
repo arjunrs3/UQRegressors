@@ -1,3 +1,15 @@
+"""
+Gaussian Process Regression 
+---------------------------
+
+This module wraps around gpytorch for regression of a one dimensional output with a Gaussian Process. 
+
+!!! note "Default Kernel"
+    Note that the default kernel is the standard RBF kernel with one lengthscale. To implement ARD and/or white 
+    noise, pass `kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=INPUT_DIM, has_lengthscale=True))`, 
+    where `INPUT_DIM` is the number of input dimensions in the problem to be solved. For more details on kernels, please see the 
+    [gpytorch docs](https://docs.gpytorch.ai/en/stable/kernels.html)
+"""
 import gpytorch
 import torch
 from uqregressors.utils.logging import Logger
@@ -29,7 +41,7 @@ class ExactGP(gpytorch.models.ExactGP):
         covar_x = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-class BBMM_GP: 
+class GP: 
     """
     A wrapper around GPyTorch's ExactGP for regression with uncertainty quantification.
 
@@ -65,7 +77,7 @@ class BBMM_GP:
         fitted (bool): Whether the fit method has been successfully called.
     """
     def __init__(self, 
-                 name="BBMM_GP_Regressor",
+                 name="GP_Regressor",
                  kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel()), 
                  likelihood=gpytorch.likelihoods.GaussianLikelihood(), 
                  alpha=0.1,
