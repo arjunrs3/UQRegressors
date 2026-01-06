@@ -24,6 +24,9 @@ class ConformalWrapper(BaseEstimator, RegressorMixin):
         self.ur = underlying_regressor 
         self.cal_size = cal_size
         self.fitted = False
+        self.alpha = self.ur.alpha
+        self.X_cal = None 
+        self.y_cal = None
 
         self.conformity_scores = None 
         self.conformal_width = None         
@@ -45,22 +48,23 @@ class ConformalWrapper(BaseEstimator, RegressorMixin):
 
         X_train, X_cal, y_train, y_cal = train_test_split(X_tensor, y_tensor, test_size=self.cal_size, device=self.ur.device, random_state=self.ur.random_seed)
 
+        self.X_cal = X_cal 
+        self.y_cal = y_cal 
+
         self.ur.fit(X_train, y_train) 
+        self.compute_conformity_scores(X_cal, y_cal)
+        
+        self.fitted = True
+        return self
+
+    def compute_conformity_scores(self, X_cal, y_cal): 
         requires_grad = copy.copy(self.ur.requires_grad)
         self.ur.requires_grad = True 
         mean, lower, upper = self.ur.predict(X_cal)
         self.ur.requires_grad = requires_grad
         lower_loss = lower.view(-1, 1) - y_cal.view(-1, 1)
         upper_loss = -1 * (upper.view(-1, 1) - y_cal.view(-1, 1))
-        self.lower_loss = lower_loss 
-        self.upper_loss = upper_loss 
-        self.preds_l = lower 
-        self.preds_u = upper 
-        self.y_cal = y_cal
         self.conformity_scores = torch.max(torch.cat((lower_loss, upper_loss), dim=1), dim=1).values
-        
-        self.fitted = True
-        return self
 
     def predict(self, X): 
         """
@@ -104,9 +108,6 @@ class ConformalWrapper(BaseEstimator, RegressorMixin):
         else: 
             return mean, lower, upper
         
-    def return_last_layer_grads(self, X, epsilon=1e-6):    
-        return self.ur.return_last_layer_grads(self, X, epsilon)
-
     def save(self, path): 
         """
         Save model weights, config, and scalers to disk.
@@ -114,6 +115,7 @@ class ConformalWrapper(BaseEstimator, RegressorMixin):
         Args:
             path (str or Path): Directory to save model components.
         """
+        path = Path(path)
         config = {"name": self.name,  
                   "cal_size": self.cal_size, 
                   "fitted": self.fitted, 
@@ -128,7 +130,9 @@ class ConformalWrapper(BaseEstimator, RegressorMixin):
 
         torch.save({
             "conformity_scores": self.conformity_scores, 
-            "conformal_width": self.conformal_width
+            "conformal_width": self.conformal_width, 
+            "X_cal": self.X_cal, 
+            "y_cal": self.y_cal
         }, path / "extras.pt")
 
         self.ur.save(path / "model")
@@ -168,5 +172,7 @@ class ConformalWrapper(BaseEstimator, RegressorMixin):
             extras = torch.load(extras_path, map_location=device, weights_only=False)
             model.conformity_scores = extras.get("conformity_scores", None)
             model.conformal_width = extras.get("conformal_width", None)
+            model.X_cal = extras.get("X_cal", None)
+            model.y_cal = extras.get("y_cal", None)
 
         return model
