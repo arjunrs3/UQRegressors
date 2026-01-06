@@ -3,8 +3,8 @@ $env:JUPYTER_PLATFORM_DIRS = "1"
 
 Set-Location -Path $PSScriptRoot
 
-$srcFolder = Join-Path $PSScriptRoot ".." "examples"
-$dstFolder = Join-Path $PSScriptRoot "docs" "examples"
+$srcFolder = Join-Path (Join-Path $PSScriptRoot "..") "examples"
+$dstFolder = Join-Path (Join-Path $PSScriptRoot "docs") "examples"
 
 if (Test-Path $dstFolder) {
     Remove-Item -Recurse -Force $dstFolder
@@ -19,4 +19,5 @@ Get-ChildItem -Path $srcFolder -Filter *.ipynb -Recurse | ForEach-Object {
         --output-dir $dstFolder
 }
 
+# Explicit config + output dir
 mkdocs build -f mkdocs.yml -d site
