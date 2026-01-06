@@ -10,25 +10,21 @@ $dstFolder = "docs\examples"
 
 # Remove old docs/examples folder if it exists
 if (Test-Path $dstFolder) {
-    Write-Host "Removing old $dstFolder"
     Remove-Item -Recurse -Force $dstFolder
 }
 
 # Recreate destination folder
-Set-Location -Path $PSScriptRoot
-Write-Host "Creating $dstFolder"
 New-Item -ItemType Directory -Path $dstFolder | Out-Null
 
 # Convert all .ipynb files to markdown
-Write-Host "Converting notebooks to markdown..."
 Get-ChildItem -Path $srcFolder -Filter *.ipynb -Recurse | ForEach-Object {
-    $inputFile = $_.FullName
-    $outputBaseName = $_.BaseName
-
-    Write-Host "Converting $inputFile ..."
-    # Use --output-dir to control where markdown goes, and --output for filename only
-    jupyter nbconvert --to markdown $inputFile --output $outputBaseName --output-dir $dstFolder
+    jupyter nbconvert --to markdown `
+        $_.FullName `
+        --output $_.BaseName `
+        --output-dir $dstFolder
 }
+
+mkdocs build
 
 # Run mkdocs serve
 Write-Host "Starting MkDocs server..."
