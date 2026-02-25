@@ -47,7 +47,7 @@ class MLP(nn.Module):
             if dropout is not None: 
                 layers.append(nn.Dropout(dropout))
             input_dim = h 
-        layers.append(nn.Linear(hidden_sizes[-1], 2))
+        layers.append(nn.Linear(hidden_sizes[-1], 3))
         self.model = nn.Sequential(*layers)
 
     def forward(self, x): 
@@ -147,7 +147,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
 
         self.random_seed = random_seed
 
-        self.quantiles = torch.tensor([self.tau_lo, 1-self.tau_lo], device=self.device)
+        self.quantiles = torch.tensor([self.tau_lo, 0.5, 1-self.tau_lo], device=self.device)
 
         self.residuals = [] 
         self.conformal_width = None 
@@ -176,7 +176,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             (Tensor): Scalar loss.
         """
         error = y.view(-1, 1) - preds 
-        return torch.mean(torch.max(self.quantiles * error, (self.quantiles - 1) * error))
+        return torch.mean(torch.maximum(self.quantiles * error, (self.quantiles - 1) * error))
 
     def fit(self, X, y): 
         """
@@ -250,7 +250,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
 
         self.model.eval()
-        oof_preds = self.model(X_cal)
+        oof_preds = self.model(X_cal)[:, [0, 2]]
         loss_matrix = (oof_preds - y_cal) * torch.tensor([1, -1], device=self.device)
         self.residuals = torch.max(loss_matrix, dim=1).values
 
@@ -296,11 +296,11 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             X_tensor = self.input_scaler.transform(X_tensor)
 
         preds = self.model(X_tensor)
+        mean = preds[:, 1].unsqueeze(dim=1)
         lower_cq = preds[:, 0].unsqueeze(dim=1)
-        upper_cq = preds[:, 1].unsqueeze(dim=1)
+        upper_cq = preds[:, 2].unsqueeze(dim=1)
         lower = lower_cq - self.conformal_width 
         upper = upper_cq + self.conformal_width 
-        mean = (lower + upper) / 2 
 
         if self.scale_data: 
             mean = self.output_scaler.inverse_transform(mean).squeeze()

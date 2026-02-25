@@ -297,7 +297,7 @@ class ConformalQuantileEnsemble(BaseEstimator, RegressorMixin):
         lower_cq = torch.mean(preds[:, :, 0], dim=0)
         lower_var = torch.var(preds[:, :, 0], dim=0)
         lower_std = lower_var.sqrt()
-        std_mult = torch.tensor(st.norm.ppf(1 - self.alpha / 2), device=self.device)
+        std_mult = torch.tensor(st.norm.ppf(1 - self.alpha), device=self.device)
 
         upper_cq = torch.mean(preds[:, :, 1], dim=0)
         upper_var = torch.var(preds[:, :, 1], dim=0)
