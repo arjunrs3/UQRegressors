@@ -1,8 +1,8 @@
 """
-Conformalized Quantile Regression (CQR)
+Quantile Regression (QR)
 ----------
 
-This module implements CQR in a split conformal context for regression on a one dimensional output 
+This module implements QR for regression on a one dimensional output 
 
 Key features are: 
     - Customizable neural network architecture
@@ -18,9 +18,8 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.base import BaseEstimator, RegressorMixin 
 from uqregressors.utils.activations import get_activation
 from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
-from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler, train_test_split
+from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler
 from uqregressors.utils.logging import Logger 
-from joblib import Parallel, delayed 
 from pathlib import Path 
 import json 
 import pickle 
@@ -53,16 +52,15 @@ class MLP(nn.Module):
     def forward(self, x): 
         return self.model(x)
 
-class ConformalQuantileRegressor(BaseEstimator, RegressorMixin): 
+class QuantileRegressor(BaseEstimator, RegressorMixin): 
     """
-    Conformalized Quantile Regressor for uncertainty estimation in regression tasks.
+    Quantile Regressor for uncertainty estimation in regression tasks.
 
-    This class trains one quantile neural network and conformalizes it with split conformal prediction
+    This class trains one quantile neural network
 
     Args:
         name (str): Name of the model.
         hidden_sizes (list): Sizes of the hidden layers for each quantile regressor.
-        cal_size (float): Proportion of training samples to use for calibration, between 0 and 1. 
         dropout (float or None): Dropout rate for the neural network layers.
         alpha (float): Miscoverage rate (1 - confidence level).
         requires_grad (bool): Whether inputs should require gradient.
@@ -98,7 +96,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             self, 
             name="Conformal_Quantile_Regressor",
             hidden_sizes = [64, 64],
-            cal_size = 0.2, 
             dropout = None, 
             alpha = 0.1, 
             requires_grad = False, 
@@ -125,7 +122,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
     ):
         self.name = name
         self.hidden_sizes = hidden_sizes 
-        self.cal_size = cal_size 
         self.dropout = dropout 
         self.alpha = alpha 
         self.requires_grad = requires_grad
@@ -148,9 +144,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.random_seed = random_seed
 
         self.quantiles = torch.tensor([self.tau_lo, 0.5, 1-self.tau_lo], device=self.device)
-
-        self.residuals = [] 
-        self.conformal_width = None 
         self.input_dim = None
 
         self.scale_data = scale_data 
@@ -196,8 +189,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             X = self.input_scaler.fit_transform(X)
             y = self.output_scaler.fit_transform(y.reshape(-1, 1))
 
-        X_train, X_cal, y_train, y_cal = train_test_split(X, y, test_size=self.cal_size, random_state=self.random_seed, device=self.device, shuffle=True)
-
         input_dim = X.shape[1]
         self.input_dim = input_dim 
 
@@ -229,7 +220,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
                 self.scheduler_kwargs["T_max"] = self.epochs
             scheduler = self.scheduler_cls(optimizer, **self.scheduler_kwargs)
 
-        dataset = TensorDataset(X_train, y_train)
+        dataset = TensorDataset(X, y)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
         self.model.train()
@@ -248,11 +239,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
 
             if epoch % int(np.ceil(self.epochs / self.logging_frequency)) == 0:
                 logger.log({"epoch": epoch, "train_loss": epoch_loss})
-
-        self.model.eval()
-        oof_preds = self.model(X_cal)[:, [0, 2]]
-        loss_matrix = (oof_preds - y_cal) * torch.tensor([1, -1], device=self.device)
-        self.residuals = torch.max(loss_matrix, dim=1).values
 
         logger.finish()
         self._loggers.append(logger)
@@ -281,13 +267,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         X_tensor = validate_X_input(X, input_dim=self.input_dim, device=self.device, requires_grad=self.requires_grad)
         self.model.eval()
 
-        n = len(self.residuals)
-        q = int((1 - self.alpha) * (n + 1))
-        q = min(q, n-1)
-        res_quantile = n-q
-
-        self.conformal_width = torch.topk(self.residuals, res_quantile).values[-1]
-
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)
             np.random.seed(self.random_seed)
@@ -297,10 +276,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
 
         preds = self.model(X_tensor)
         mean = preds[:, 1].unsqueeze(dim=1)
-        lower_cq = preds[:, 0].unsqueeze(dim=1)
-        upper_cq = preds[:, 2].unsqueeze(dim=1)
-        lower = lower_cq - self.conformal_width 
-        upper = upper_cq + self.conformal_width 
+        lower = preds[:, 0].unsqueeze(dim=1)
+        upper = preds[:, 2].unsqueeze(dim=1)
 
         if self.scale_data: 
             mean = self.output_scaler.inverse_transform(mean).squeeze()
@@ -355,8 +332,6 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         torch.save(self.model.state_dict(), path / f"model.pt")
 
         torch.save({
-            "conformal_width": self.conformal_width, 
-            "residuals": self.residuals,
             "quantiles": self.quantiles
         }, path / "extras.pt")
 
@@ -408,12 +383,8 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         extras_path = path / "extras.pt"
         if extras_path.exists():
             extras = torch.load(extras_path, map_location=device, weights_only=False)
-            model.residuals = extras.get("residuals", None)
-            model.conformal_width = extras.get("conformal_width", None)
             model.quantiles = extras.get("quantiles", None)
         else:
-            model.residuals = None
-            model.conformal_width = None
             model.quantiles = None
 
         model.optimizer_cls = optimizer_cls 
