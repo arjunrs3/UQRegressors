@@ -17,6 +17,7 @@ from scipy.stats import norm
 import tempfile
 import optuna 
 import copy 
+import gpytorch
 
 warnings.filterwarnings("ignore")
 
@@ -112,7 +113,22 @@ def tune_hyperparams(
                 estimator = regressor
 
             for param_name, param_value in trial_params.items():
-                setattr(estimator, param_name, param_value)
+                if param_name == "kernel": 
+                    n_features = X_train.shape[1]
+                    if param_value == "RBF": 
+                        setattr(estimator, "kernel", 
+                                gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+                    elif param_value == "Matern_15": 
+                        setattr(estimator, "kernel", 
+                                gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu=1.5, ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+                    elif param_value == "Matern_25": 
+                        setattr(estimator, "kernel", 
+                                gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu=2.5, ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+                    else: 
+                        raise ValueError(f"Kernel {param_value} not recognized: Please choose RBF, Matern_15, or Matern_25")
+                
+                else: 
+                    setattr(estimator, param_name, param_value)
 
             estimator.fit(X_train, y_train)
             score = score_fn(estimator, X_val, y_val)
@@ -137,6 +153,20 @@ def tune_hyperparams(
                     if param_name == "weight_decay": 
                         print("setting weight decay")
                         estimator.optimizer_kwargs["weight_decay"] = param_value
+
+                    elif param_name == "kernel": 
+                        n_features = X_train.shape[1]
+                        if param_value == "RBF": 
+                            setattr(estimator, "kernel", 
+                                    gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+                        elif param_value == "Matern_15": 
+                            setattr(estimator, "kernel", 
+                                    gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu=1.5, ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+                        elif param_value == "Matern_25": 
+                            setattr(estimator, "kernel", 
+                                    gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu=2.5, ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+                        else: 
+                            raise ValueError(f"Kernel {param_value} not recognized: Please choose RBF, Matern_15, or Matern_25")
                     else: 
                         setattr(estimator, param_name, param_value)
 
@@ -169,6 +199,19 @@ def tune_hyperparams(
         if k == "weight_decay": 
             print("setting weight decay")
             best_estimator.optimizer_kwargs["weight_decay"] = v
+        elif k == "kernel": 
+            n_features = X.shape[1]
+            if v == "RBF": 
+                setattr(best_estimator, "kernel", 
+                        gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+            elif v == "Matern_15": 
+                setattr(best_estimator, "kernel", 
+                        gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu=1.5, ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+            elif v == "Matern_25": 
+                setattr(best_estimator, "kernel", 
+                        gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu=2.5, ard_num_dims=n_features, has_lengthscale=True)) + gpytorch.kernels.ConstantKernel())
+            else: 
+                raise ValueError(f"Kernel {v} not recognized: Please choose RBF, Matern_15, or Matern_25")
         else: 
             setattr(best_estimator, k, v)
     best_estimator.fit(X, y)
