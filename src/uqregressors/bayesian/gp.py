@@ -135,6 +135,9 @@ class GP:
 
         self.fitted = False
 
+    def set_alpha(self, alpha): 
+        self.alpha = alpha
+
     def fit(self, X, y): 
         """
         Fits the GP model to training data.

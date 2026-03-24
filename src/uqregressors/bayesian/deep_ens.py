@@ -163,6 +163,10 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
             self.input_scaler = input_scaler or TorchStandardScaler()
             self.output_scaler = output_scaler or TorchStandardScaler()
 
+        else: 
+            self.input_scaler = None 
+            self.output_scaler = None
+
         self.defective_models = defective_models
         self._loggers = []
         self.logging_frequency = logging_frequency
@@ -172,6 +176,9 @@ class DeepEnsembleRegressor(BaseEstimator, RegressorMixin):
         self.fitted = False
         self.n_gradients = 2 * self.n_estimators
 
+    def set_alpha(self, alpha): 
+        self.alpha = alpha 
+        
     def nll_loss(self, preds, y): 
         """
         Negative log-likelihood loss assuming Gaussian outputs.

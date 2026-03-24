@@ -154,8 +154,12 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.input_dim = None
 
         self.scale_data = scale_data 
-        self.input_scaler = input_scaler or TorchStandardScaler() 
-        self.output_scaler = output_scaler or TorchStandardScaler()
+        if self.scale_data: 
+            self.input_scaler = input_scaler or TorchStandardScaler() 
+            self.output_scaler = output_scaler or TorchStandardScaler()
+        else: 
+            self.input_scaler = None 
+            self.output_scaler = None
 
         self._loggers = []
         self.logging_frequency = logging_frequency
@@ -163,6 +167,10 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
         self.tuning_loggers = tuning_loggers
         self.tuning_logs = None
         self.fitted = False
+
+    def set_alpha(self, alpha): 
+        self.alpha = alpha
+        self.tau_lo = alpha / 2
 
     def quantile_loss(self, preds, y): 
         """
@@ -187,6 +195,7 @@ class ConformalQuantileRegressor(BaseEstimator, RegressorMixin):
             y (array-like): Target values of shape (n_samples,).
         """
         X, y = validate_and_prepare_inputs(X, y, device=self.device)
+        self.quantiles = torch.tensor([self.tau_lo, 0.5, 1-self.tau_lo], device=self.device)
 
         if self.random_seed is not None: 
             torch.manual_seed(self.random_seed)

@@ -19,17 +19,24 @@ import copy
 class ConformalWrapper(BaseEstimator, RegressorMixin): 
     def __init__(self, 
                  underlying_regressor=None, 
-                 cal_size=0.3):
+                 cal_size=0.3, 
+                 alpha=0.1):
         self.name = "Conformal_" + underlying_regressor.name
         self.ur = underlying_regressor 
         self.cal_size = cal_size
         self.fitted = False
-        self.alpha = self.ur.alpha
+        self.alpha = alpha
+        self.ur.alpha = alpha
         self.X_cal = None 
         self.y_cal = None
+        self.input_dim = self.ur.input_dim
 
         self.conformity_scores = None 
         self.conformal_width = None         
+
+    def set_alpha(self, alpha): 
+        self.alpha = alpha 
+        self.ur.alpha = alpha
 
     def fit(self, X, y): 
         """
@@ -119,7 +126,8 @@ class ConformalWrapper(BaseEstimator, RegressorMixin):
         config = {"name": self.name,  
                   "cal_size": self.cal_size, 
                   "fitted": self.fitted, 
-                  "input_dim": self.input_dim
+                  "input_dim": self.input_dim, 
+                  "alpha": self.alpha
                   }
         
         with open(path / "config.json", "w") as f:
