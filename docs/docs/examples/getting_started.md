@@ -253,6 +253,36 @@ plot_uncertainty_results(*ARD_gp_sol, "ARD Gaussian Process Regressor")
     
 
 
+## Quantile Regression
+
+
+```python
+from uqregressors.conformal.quantile_regression import QuantileRegressor
+
+qr = QuantileRegressor(hidden_sizes=[100, 100], 
+                       alpha = 0.1, 
+                       dropout=None, 
+                       epochs=2500, 
+                       learning_rate=1e-3, 
+                       device="cpu", 
+                       use_wandb=False
+                       )
+
+qr.fit(X_train, y_train)
+qr_sol = qr.predict(X_test)
+```
+
+
+```python
+plot_uncertainty_results(*qr_sol, "Quantile Regressor")
+```
+
+
+    
+![png](getting_started_files/getting_started_17_0.png)
+    
+
+
 ### Split Conformal Quantile Regression
 
 
@@ -281,7 +311,7 @@ plot_uncertainty_results(*cqr_sol, "Split Conformal Quantile Regression")
 
 
     
-![png](getting_started_files/getting_started_17_0.png)
+![png](getting_started_files/getting_started_20_0.png)
     
 
 
@@ -314,7 +344,7 @@ plot_uncertainty_results(*k_fold_cqr_sol, "K-Fold Conformal Quantile Regression"
 
 
     
-![png](getting_started_files/getting_started_20_0.png)
+![png](getting_started_files/getting_started_23_0.png)
     
 
 
@@ -345,7 +375,7 @@ plot_uncertainty_results(*conformal_ens_sol, "Normalized Conformal Ensemble")
 
 
     
-![png](getting_started_files/getting_started_22_0.png)
+![png](getting_started_files/getting_started_25_0.png)
     
 
 
@@ -368,7 +398,7 @@ plot_uncertainty_results(*conformal_ens_sol, "Conformalized Deep Ensemble")
 
 
     
-![png](getting_started_files/getting_started_24_0.png)
+![png](getting_started_files/getting_started_27_0.png)
     
 
 
@@ -396,7 +426,7 @@ plot_uncertainty_results(*conformalized_quantile_ens_sol, "Conformalized Quantil
 
 
     
-![png](getting_started_files/getting_started_26_0.png)
+![png](getting_started_files/getting_started_29_0.png)
     
 
 
@@ -432,7 +462,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_0.png)
+![png](getting_started_files/getting_started_31_0.png)
     
 
 
@@ -442,7 +472,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_2.png)
+![png](getting_started_files/getting_started_31_2.png)
     
 
 
@@ -452,7 +482,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_4.png)
+![png](getting_started_files/getting_started_31_4.png)
     
 
 
@@ -462,7 +492,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_6.png)
+![png](getting_started_files/getting_started_31_6.png)
     
 
 
@@ -472,7 +502,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_8.png)
+![png](getting_started_files/getting_started_31_8.png)
     
 
 
@@ -482,7 +512,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_10.png)
+![png](getting_started_files/getting_started_31_10.png)
     
 
 
@@ -492,7 +522,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_12.png)
+![png](getting_started_files/getting_started_31_12.png)
     
 
 
@@ -502,7 +532,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_14.png)
+![png](getting_started_files/getting_started_31_14.png)
     
 
 
@@ -512,7 +542,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_28_16.png)
+![png](getting_started_files/getting_started_31_16.png)
     
 
 
@@ -570,7 +600,7 @@ plot_cal_curve(des_cov,
 
 
     
-![png](getting_started_files/getting_started_30_1.png)
+![png](getting_started_files/getting_started_33_1.png)
     
 
 
@@ -605,7 +635,7 @@ plot_pred_vs_true(*dropout_sol,
 
 
     
-![png](getting_started_files/getting_started_32_0.png)
+![png](getting_started_files/getting_started_35_0.png)
     
 
 
@@ -670,7 +700,7 @@ hyperparam_comparison_dict = {"CQR_untuned": cqr_sol,
 
 
     
-![png](getting_started_files/getting_started_34_3.png)
+![png](getting_started_files/getting_started_37_3.png)
     
 
 
@@ -691,7 +721,7 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
 
 
     
-![png](getting_started_files/getting_started_36_0.png)
+![png](getting_started_files/getting_started_39_0.png)
     
 
 
@@ -701,7 +731,7 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
 
 
     
-![png](getting_started_files/getting_started_36_2.png)
+![png](getting_started_files/getting_started_39_2.png)
     
 
 
