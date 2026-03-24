@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 import torch
+from covmetrics import ERT
 
 def validate_inputs(mean, lower, upper, y_true, alpha=0.5):
     """
@@ -231,7 +232,13 @@ def lowest_group_coverage(lower, upper, y_true, n_bins=10):
     gcc = group_conditional_coverage(lower, upper, y_true, n_bins)
     return np.min(gcc["bin_coverages"])
 
-def compute_all_metrics(mean, lower, upper, y_true, alpha, n_bins=10, excluded_metrics=["group_conditional_coverage"]):
+def evaluate_ERT(lower, upper, y_true, alpha, X_true):
+    ERT_estimator = ERT()
+    Z = ((y_true >= lower) * (y_true <= upper))
+    ERT_value = ERT_estimator.evaluate(X_true, Z, np.ones_like(Z) * alpha, n_splits=5)
+    return ERT_value
+
+def compute_all_metrics(mean, lower, upper, y_true, alpha, X_true=None, n_bins=10, excluded_metrics=["group_conditional_coverage"]):
     """
     Compute all standard uncertainty quantification metrics and return as a dictionary.
     Computes the Root Mean Square Coverage Deviation (RMSCD) evaluated over a given number of bins. 
@@ -242,6 +249,7 @@ def compute_all_metrics(mean, lower, upper, y_true, alpha, n_bins=10, excluded_m
         upper (Union[np.ndarray, torch.Tensor]): The upper bound predictions made by the model, should be the same shape as mean.
         y_true (Union[np.ndarray, torch.Tensor]): The targets to compare against, should be the same shape as mean.
         alpha (float): 1 - confidence, should be a float between 0 and 1. 
+        X_true (Union[np.ndarray, torch.Tensor]): The inputs to model training, used for ERT calculation. 
         n_bins (int): The number of bins to divide the outputs into for conditional coverage metrics. 
         excluded_metrics (list): The key of any metrics to exclude from being returned.
 
@@ -267,6 +275,8 @@ def compute_all_metrics(mean, lower, upper, y_true, alpha, n_bins=10, excluded_m
             RMSCD_under (float): Root mean square coverage deviation for all bins which undercover compared to nominal coverage.
 
             lowest_group_coverage (float): The lowest coverage of any bin into which the outputs were binned. 
+
+            ERT (float): The ERT as described by Braun et. al. 2025. Returns -1 if X_true is not given as a parameter. 
     """
 
     mean, lower, upper, y_true, alpha = validate_inputs(mean, lower, upper, y_true, alpha)
@@ -283,6 +293,14 @@ def compute_all_metrics(mean, lower, upper, y_true, alpha, n_bins=10, excluded_m
         "RMSCD_under": RMSCD_under(lower, upper, y_true, alpha, n_bins),
         "lowest_group_coverage": lowest_group_coverage(lower, upper, y_true, n_bins)
     }
+
+    if X_true is not None: 
+        try: 
+            metrics_dict["ERT"] = evaluate_ERT(lower, upper, y_true, alpha, X_true)
+        except: 
+            metrics_dict["ERT"] = -1
+    else: 
+        metrics_dict["ERT"] = -1
 
     return_dict = {}
     for metric, value in metrics_dict.items(): 

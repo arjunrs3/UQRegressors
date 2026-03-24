@@ -39,6 +39,10 @@ def interval_width(estimator, X, y):
     _, lower, upper = estimator.predict(X)
     return np.mean(upper - lower)
 
+def rmse(estimator, X, y): 
+    mean, lower, upper = estimator.predict(X)
+    return(np.sqrt(np.mean((mean - y.ravel())**2)))
+
 def log_likelihood(estimator, X, y): 
     """
     Example of maximizing log likelihood scoring function for hyperparameter tuning, greater=True
