@@ -212,6 +212,28 @@ gp.fit(X_train, y_train)
 gp_sol = gp.predict(X_test)
 ```
 
+    [Logger-19856] epoch=0, train_loss=0.8158254027366638
+    [Logger-19856] epoch=50, train_loss=-1.080079197883606
+    [Logger-19856] epoch=100, train_loss=-1.0865188837051392
+    [Logger-19856] epoch=150, train_loss=-1.0865612030029297
+    [Logger-19856] epoch=200, train_loss=-1.0865542888641357
+    [Logger-19856] epoch=250, train_loss=-1.0865321159362793
+    [Logger-19856] epoch=300, train_loss=-1.0865473747253418
+    [Logger-19856] epoch=350, train_loss=-1.0865387916564941
+    [Logger-19856] epoch=400, train_loss=-1.0865530967712402
+    [Logger-19856] epoch=450, train_loss=-1.0865600109100342
+    [Logger-19856] epoch=500, train_loss=-1.0865566730499268
+    [Logger-19856] epoch=550, train_loss=-1.0865514278411865
+    [Logger-19856] epoch=600, train_loss=-1.0865339040756226
+    [Logger-19856] epoch=650, train_loss=-1.0865482091903687
+    [Logger-19856] epoch=700, train_loss=-1.0865514278411865
+    [Logger-19856] epoch=750, train_loss=-1.0865554809570312
+    [Logger-19856] epoch=800, train_loss=-1.0865540504455566
+    [Logger-19856] epoch=850, train_loss=-1.0865315198898315
+    [Logger-19856] epoch=900, train_loss=-1.0865355730056763
+    [Logger-19856] epoch=950, train_loss=-1.0865557193756104
+    
+
 
 ```python
 plot_uncertainty_results(*gp_sol, "Gaussian Process Regressor")
@@ -239,17 +261,165 @@ ARD_gp = GP(kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_n
                            use_wandb=False)
 
 ARD_gp.fit(X_train, y_train)
-ARD_gp_sol = gp.predict(X_test)
+ARD_gp_sol = ARD_gp.predict(X_test)
 ```
+
+    [Logger-25060] epoch=0, train_loss=0.8158254027366638
+    [Logger-25060] epoch=50, train_loss=-1.0800780057907104
+    [Logger-25060] epoch=100, train_loss=-1.086523413658142
+    [Logger-25060] epoch=150, train_loss=-1.086581826210022
+    [Logger-25060] epoch=200, train_loss=-1.0865639448165894
+    [Logger-25060] epoch=250, train_loss=-1.086527943611145
+    [Logger-25060] epoch=300, train_loss=-1.0865470170974731
+    [Logger-25060] epoch=350, train_loss=-1.0865532159805298
+    [Logger-25060] epoch=400, train_loss=-1.0865644216537476
+    [Logger-25060] epoch=450, train_loss=-1.0865546464920044
+    [Logger-25060] epoch=500, train_loss=-1.0865572690963745
+    [Logger-25060] epoch=550, train_loss=-1.0865633487701416
+    [Logger-25060] epoch=600, train_loss=-1.0865682363510132
+    [Logger-25060] epoch=650, train_loss=-1.0865685939788818
+    [Logger-25060] epoch=700, train_loss=-1.0865392684936523
+    [Logger-25060] epoch=750, train_loss=-1.0865607261657715
+    [Logger-25060] epoch=800, train_loss=-1.0865607261657715
+    [Logger-25060] epoch=850, train_loss=-1.0865478515625
+    [Logger-25060] epoch=900, train_loss=-1.0865544080734253
+    [Logger-25060] epoch=950, train_loss=-1.0865676403045654
+    
 
 
 ```python
 plot_uncertainty_results(*ARD_gp_sol, "ARD Gaussian Process Regressor")
+print(ARD_gp.model.covar_module.base_kernel.lengthscale)
+print(ARD_gp.model.covar_module.outputscale)
+print(ARD_gp.model.mean_module.constant)
+print(ARD_gp.model.likelihood.noise_covar.noise)
 ```
 
 
     
 ![png](getting_started_files/getting_started_14_0.png)
+    
+
+
+    tensor([[0.7950]], grad_fn=<SoftplusBackward0>)
+    tensor(1.1026, grad_fn=<SoftplusBackward0>)
+    Parameter containing:
+    tensor(-0.3132, requires_grad=True)
+    tensor([0.0048], grad_fn=<AddBackward0>)
+    
+
+## Fully Bayesian GP
+
+
+```python
+import gpytorch
+import pyro 
+from uqregressors.bayesian.fbgp import FBGP, counter
+
+counter = 0
+
+n_features = 1
+kernel = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=n_features, has_lengthscale=True))
+likelihood = gpytorch.likelihoods.GaussianLikelihood(noise_constraint=gpytorch.constraints.Positive())
+mean_module = gpytorch.means.ConstantMean()
+
+priors = {
+    "log_lengthscale": pyro.distributions.MultivariateNormal(torch.zeros(n_features)-0.15, torch.eye(n_features) * 0.4), 
+    "log_outputscale": pyro.distributions.Normal(0.5, 1), 
+    "log_noise": pyro.distributions.Normal(-2.32, 0.5), 
+    "mean": pyro.distributions.Normal(0, 1)
+}
+
+fbgp = FBGP(kernel=kernel, 
+            likelihood=likelihood, 
+            mean_module=mean_module, 
+            priors=priors,
+            warmup_steps=50, 
+            num_samples=50,
+            alpha=0.1, 
+            device="cpu")
+
+fbgp.fit(X_train, y_train)
+fbgp_sol = fbgp.predict(X_test)
+```
+
+    Warmup:   0%|          | 0/100 [00:00, ?it/s]c:\Users\arsha\AppData\Local\hatch\env\virtual\uqregressors\pe5T5b9S\uqregressors\Lib\site-packages\gpytorch\models\exact_gp.py:299: GPInputWarning: The input matches the stored training data. Did you forget to call model.train()?
+      warnings.warn(
+    Sample: 100%|██████████| 100/100 [01:38,  1.02it/s, step size=7.25e-02, acc. prob=0.417]
+    
+
+
+```python
+import gpytorch
+import pyro 
+from uqregressors.bayesian.fbgp import FBGP, counter
+
+print(counter)
+plot_uncertainty_results(*fbgp_sol, "Fully Bayesian Gaussian Process Regressor")
+```
+
+    6098
+    
+
+
+    
+![png](getting_started_files/getting_started_17_1.png)
+    
+
+
+## Manifold GP
+
+
+```python
+from uqregressors.bayesian.manifold_gp import ManifoldGP
+n_features = 1
+kernel = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=n_features, has_lengthscale=True))
+likelihood = gpytorch.likelihoods.GaussianLikelihood(noise_constraint=gpytorch.constraints.Positive())
+mean_module = gpytorch.means.ConstantMean()
+
+mgp = ManifoldGP(hidden_sizes=[100, 50, 2], 
+                 kernel=kernel, 
+                 likelihood=likelihood, 
+                 activation_str="tanh",
+                 alpha=0.1, 
+                 dropout=0.1, 
+                 epochs=1000, 
+                 learning_rate=1e-2)
+
+mgp.fit(X_train, y_train)
+mgp_sol = mgp.predict(X_test)
+```
+
+    [Logger-25060] epoch=0, train_loss=1.2557119131088257
+    [Logger-25060] epoch=50, train_loss=0.6698762774467468
+    [Logger-25060] epoch=100, train_loss=0.4424186646938324
+    [Logger-25060] epoch=150, train_loss=0.21799468994140625
+    [Logger-25060] epoch=200, train_loss=-0.0037646484561264515
+    [Logger-25060] epoch=250, train_loss=-0.2092188447713852
+    [Logger-25060] epoch=300, train_loss=-0.37750425934791565
+    [Logger-25060] epoch=350, train_loss=-0.496538907289505
+    [Logger-25060] epoch=400, train_loss=-0.5813559889793396
+    [Logger-25060] epoch=450, train_loss=-0.5015100836753845
+    [Logger-25060] epoch=500, train_loss=-0.6315650343894958
+    [Logger-25060] epoch=550, train_loss=-0.6361599564552307
+    [Logger-25060] epoch=600, train_loss=-0.6772912740707397
+    [Logger-25060] epoch=650, train_loss=-0.6582775712013245
+    [Logger-25060] epoch=700, train_loss=-0.5913873314857483
+    [Logger-25060] epoch=750, train_loss=-0.7139817476272583
+    [Logger-25060] epoch=800, train_loss=-0.6778721213340759
+    [Logger-25060] epoch=850, train_loss=-0.7103567719459534
+    [Logger-25060] epoch=900, train_loss=-0.6432898044586182
+    [Logger-25060] epoch=950, train_loss=-0.6124772429466248
+    
+
+
+```python
+plot_uncertainty_results(*mgp_sol, "Manifold GP")
+```
+
+
+    
+![png](getting_started_files/getting_started_20_0.png)
     
 
 
@@ -279,7 +449,7 @@ plot_uncertainty_results(*qr_sol, "Quantile Regressor")
 
 
     
-![png](getting_started_files/getting_started_17_0.png)
+![png](getting_started_files/getting_started_23_0.png)
     
 
 
@@ -311,7 +481,7 @@ plot_uncertainty_results(*cqr_sol, "Split Conformal Quantile Regression")
 
 
     
-![png](getting_started_files/getting_started_20_0.png)
+![png](getting_started_files/getting_started_26_0.png)
     
 
 
@@ -344,7 +514,7 @@ plot_uncertainty_results(*k_fold_cqr_sol, "K-Fold Conformal Quantile Regression"
 
 
     
-![png](getting_started_files/getting_started_23_0.png)
+![png](getting_started_files/getting_started_29_0.png)
     
 
 
@@ -375,7 +545,7 @@ plot_uncertainty_results(*conformal_ens_sol, "Normalized Conformal Ensemble")
 
 
     
-![png](getting_started_files/getting_started_25_0.png)
+![png](getting_started_files/getting_started_31_0.png)
     
 
 
@@ -398,7 +568,7 @@ plot_uncertainty_results(*conformal_ens_sol, "Conformalized Deep Ensemble")
 
 
     
-![png](getting_started_files/getting_started_27_0.png)
+![png](getting_started_files/getting_started_33_0.png)
     
 
 
@@ -426,7 +596,7 @@ plot_uncertainty_results(*conformalized_quantile_ens_sol, "Conformalized Quantil
 
 
     
-![png](getting_started_files/getting_started_29_0.png)
+![png](getting_started_files/getting_started_35_0.png)
     
 
 
@@ -462,7 +632,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_0.png)
+![png](getting_started_files/getting_started_37_0.png)
     
 
 
@@ -472,7 +642,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_2.png)
+![png](getting_started_files/getting_started_37_2.png)
     
 
 
@@ -482,7 +652,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_4.png)
+![png](getting_started_files/getting_started_37_4.png)
     
 
 
@@ -492,7 +662,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_6.png)
+![png](getting_started_files/getting_started_37_6.png)
     
 
 
@@ -502,7 +672,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_8.png)
+![png](getting_started_files/getting_started_37_8.png)
     
 
 
@@ -512,7 +682,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_10.png)
+![png](getting_started_files/getting_started_37_10.png)
     
 
 
@@ -522,7 +692,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_12.png)
+![png](getting_started_files/getting_started_37_12.png)
     
 
 
@@ -532,7 +702,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_14.png)
+![png](getting_started_files/getting_started_37_14.png)
     
 
 
@@ -542,7 +712,7 @@ plot_metrics_comparisons(sol_dict,
 
 
     
-![png](getting_started_files/getting_started_31_16.png)
+![png](getting_started_files/getting_started_37_16.png)
     
 
 
@@ -600,7 +770,7 @@ plot_cal_curve(des_cov,
 
 
     
-![png](getting_started_files/getting_started_33_1.png)
+![png](getting_started_files/getting_started_39_1.png)
     
 
 
@@ -635,7 +805,7 @@ plot_pred_vs_true(*dropout_sol,
 
 
     
-![png](getting_started_files/getting_started_35_0.png)
+![png](getting_started_files/getting_started_41_0.png)
     
 
 
@@ -700,7 +870,7 @@ hyperparam_comparison_dict = {"CQR_untuned": cqr_sol,
 
 
     
-![png](getting_started_files/getting_started_37_3.png)
+![png](getting_started_files/getting_started_43_3.png)
     
 
 
@@ -721,7 +891,7 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
 
 
     
-![png](getting_started_files/getting_started_39_0.png)
+![png](getting_started_files/getting_started_45_0.png)
     
 
 
@@ -731,7 +901,7 @@ plot_metrics_comparisons(hyperparam_comparison_dict, y_test, alpha=0.1, show=Tru
 
 
     
-![png](getting_started_files/getting_started_39_2.png)
+![png](getting_started_files/getting_started_45_2.png)
     
 
 

@@ -13,6 +13,7 @@ from uqregressors.bayesian.sklearn_gp import SklearnGP
 from uqregressors.conformal.conformal_wrapper import ConformalWrapper
 from uqregressors.conformal.conformal_quantile_ens import ConformalQuantileEnsemble
 from uqregressors.bayesian.gp import GP
+from uqregressors.bayesian.manifold_gp import ManifoldGP
 from uqregressors.utils.file_manager import FileManager
 
 # Set random seed for reproducibility
@@ -34,7 +35,8 @@ def generate_data(n_samples=200, n_features=5):
     (MCDropoutRegressor, "MCDropoutRegressor"), 
     (SklearnGP, "GaussianProcessRegressor"), 
     (GP, "BBMM_GP"), 
-    (KFoldCQR, "KFoldCQR")
+    (KFoldCQR, "KFoldCQR"), 
+    (ManifoldGP, "ManifoldGP")
 ])
 def test_model_save_and_load(regressor_class, regressor_name):
     fm = FileManager()

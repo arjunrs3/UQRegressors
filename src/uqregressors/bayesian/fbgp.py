@@ -13,7 +13,8 @@ import numpy as np
 import scipy.stats as st
 import copy
 from pyro.infer.autoguide import init_to_median
-counter = 0
+
+counter = 0 
 
 class ExactGP(gpytorch.models.ExactGP): 
     def __init__(self, kernel, mean_module, train_x, train_y, likelihood): 
@@ -29,11 +30,13 @@ class ExactGP(gpytorch.models.ExactGP):
 def gp_log_marginal_likelihood(model, x, y): 
     model.eval()
     model.likelihood.eval()
-    global counter
-    counter +=1
     #with gpytorch.settings.fast_computations(False, False, False): 
-    output = model(x)
-    dist = model.likelihood(output)
+    global counter 
+    counter = counter + 1
+    with gpytorch.settings.fast_pred_var(False), \
+            gpytorch.settings.fast_computations(False, False, False):
+        output = model(x)
+        dist = model.likelihood(output)
     return dist.log_prob(y)
 
 def make_pyro_model(train_x, train_y, priors): 
@@ -99,6 +102,7 @@ class FBGP:
         self.logging_frequency = logging_frequency 
         self.tuning_loggers = tuning_loggers 
         self.tuning_logs = None 
+        self.counter = 0
 
         self.scale_data = scale_data 
         if self.scale_data: 
@@ -150,29 +154,6 @@ class FBGP:
         mcmc_run.run()
 
         self.mcmc_run = mcmc_run 
-        Ls = [] 
-        alphas = [] 
-        lengthscales = [] 
-        outputscales = [] 
-        means = [] 
-        noises = [] 
-
-        samples = self.mcmc_run.get_samples() 
-        S = len(samples["log_lengthscale"])
-
-        for i in range(S): 
-            lengthscale = torch.exp(samples["log_lengthscale"][i])
-            outputscale = torch.exp(samples["log_outputscale"][i])
-            noise = torch.exp(samples["log_noise"][i])
-            mean = samples["mean"][i]
-
-            kernel = copy.deepcopy(self.kernel)
-            likelihood = copy.deepcopy(self.likelihood)
-            mean_module = copy.deepcopy(self.mean_module)
-
-            model = ExactGP(kernel, mean_module, X_tensor, y_tensor, likelihood)
-            
-
         self.fitted=True
         
     def predict(self, X): 
@@ -215,7 +196,9 @@ class FBGP:
             model.eval()
             model.likelihood.eval() 
 
-            pred = model.likelihood(model(X_tensor))
+            with gpytorch.settings.fast_pred_var(False), \
+                gpytorch.settings.fast_computations(False, False, False):
+                pred = model.likelihood(model(X_tensor))
             preds_mean.append(pred.mean)
             preds_var.append(pred.variance)
 

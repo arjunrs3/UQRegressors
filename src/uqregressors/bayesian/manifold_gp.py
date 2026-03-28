@@ -1,5 +1,5 @@
 """
-Gaussian Process Regression 
+Manifold GP 
 ---------------------------
 
 This module wraps around gpytorch for regression of a one dimensional output with a Gaussian Process. 
@@ -19,7 +19,10 @@ import json
 import pickle
 from uqregressors.utils.data_loader import validate_and_prepare_inputs, validate_X_input
 from uqregressors.utils.torch_sklearn_utils import TorchStandardScaler
+from uqregressors.utils.activations import get_activation
 import numpy as np
+import torch.nn as nn
+from torch.utils.data import TensorDataset, DataLoader
 
 class ExactGP(gpytorch.models.ExactGP): 
     """
@@ -31,21 +34,42 @@ class ExactGP(gpytorch.models.ExactGP):
         train_y (torch.Tensor): Training targets of shape (n_samples,).
         likelihood (gpytorch.likelihoods.Likelihood): Likelihood function (e.g., GaussianLikelihood).
     """
-    def __init__(self, kernel, train_x, train_y, likelihood):
+    def __init__(self, kernel, train_x, train_y, likelihood, feature_extractor):
         super(ExactGP, self).__init__(train_x, train_y, likelihood)
         self.mean_module = gpytorch.means.ConstantMean()
         self.covar_module = kernel
-    
+        self.feature_extractor = feature_extractor
+
     def forward(self, x): 
-        mean_x = self.mean_module(x)
-        covar_x = self.covar_module(x)
+        projected_x = self.feature_extractor(x)
+        mean_x = self.mean_module(projected_x)
+        covar_x = self.covar_module(projected_x)
         return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
 
-class GP: 
+class MLP(nn.Module): 
+    def __init__(self, input_dim, hidden_sizes, dropout, activation): 
+        super().__init__() 
+        layers = []
+        for i in range(len(hidden_sizes) - 1):
+            h = hidden_sizes[i] 
+            layers.append(nn.Linear(input_dim, h))
+            layers.append(activation())
+            if dropout is not None: 
+                layers.append(nn.Dropout(dropout))
+            input_dim = h 
+        layers.append(nn.Linear(h, hidden_sizes[-1]))
+        self.model = nn.Sequential(*layers)
+
+    def forward(self, x): 
+        return self.model(x)
+    
+
+class ManifoldGP: 
     """
     A wrapper around GPyTorch's ExactGP for regression with uncertainty quantification.
 
-    Supports custom kernels, optimizers, learning schedules, and logging.
+    Supports custom kernels, optimizers, learning schedules, and logging. Transforms the inputs
+    using an MLP before feeding them to the Gaussian process. 
     Outputs mean predictions and confidence intervals using predictive variance.
 
     Args:
@@ -53,9 +77,13 @@ class GP:
         kernel (gpytorch.kernels.Kernel): Covariance kernel.
         likelihood (gpytorch.likelihoods.Likelihood): Likelihood function used in GP.
         alpha (float): Significance level for predictive intervals (e.g. 0.1 = 90% CI).
+        hidden_sizes (list): Sizes of the hidden layers.
+        activation_str (str): String identifier of the activation function
+        dropout (float or None): Dropout rate for the neural network layers. 
         requires_grad (bool): If True, returns tensors requiring gradients during prediction.
         learning_rate (float): Optimizer learning rate.
         epochs (int): Number of training epochs.
+        batch_size (int): Size of minibatches for training. 
         optimizer_cls (Callable): Optimizer class (e.g., torch.optim.Adam).
         optimizer_kwargs (dict): Extra keyword arguments for the optimizer.
         scheduler_cls (Callable or None): Learning rate scheduler class.
@@ -81,6 +109,9 @@ class GP:
                  kernel=gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel()), 
                  likelihood=gpytorch.likelihoods.GaussianLikelihood(), 
                  alpha=0.1,
+                 hidden_sizes= [64, 64], 
+                 activation_str="tanh", 
+                 dropout = None, 
                  requires_grad=False,
                  learning_rate=1e-3,
                  epochs=200, 
@@ -103,6 +134,9 @@ class GP:
         self.name = name
         self.kernel = kernel 
         self.likelihood = likelihood
+        self.hidden_sizes = hidden_sizes
+        self.activation_str = activation_str 
+        self.dropout = dropout
         self.alpha = alpha 
         self.requires_grad = requires_grad
         self.learning_rate = learning_rate
@@ -180,11 +214,14 @@ class GP:
             run_name=self.wandb_run_name,
             config=config,
         )
+        activation = get_activation(self.activation_str)
+        feature_extractor = MLP(self.input_dim, self.hidden_sizes, self.dropout, activation)
 
-        model = ExactGP(self.kernel, X_tensor, y_tensor, self.likelihood)
+        model = ExactGP(self.kernel, X_tensor, y_tensor, self.likelihood, feature_extractor)
         self.model = model.to(self.device)
 
         self.model.train()
+        self.model.feature_extractor.train()
         self.likelihood.train()
 
         if self.loss_fn == None: 
@@ -192,7 +229,8 @@ class GP:
             self.loss_fn = self.mll_loss
 
         optimizer = self.optimizer_cls(
-            model.parameters(), lr=self.learning_rate, **self.optimizer_kwargs
+            [{'params': model.covar_module.parameters()}, {'params': model.feature_extractor.parameters()}, 
+             {'params': model.mean_module.parameters()}, {'params': model.likelihood.parameters()}], lr=self.learning_rate, **self.optimizer_kwargs
         )
 
         scheduler = None
@@ -215,6 +253,27 @@ class GP:
             if epoch % int(np.ceil(self.epochs / self.logging_frequency)) == 0:
                 logger.log({"epoch": epoch, "train_loss": loss})
         
+        """
+        dataset = TensorDataset(X_tensor, y_tensor)
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+
+        for epoch in range(self.epochs): 
+            epoch_loss = 0.0 
+            for xb, yb in dataloader: 
+                optimizer.zero_grad()
+                with gpytorch.settings.fast_computations(False, False, False), \
+                    gpytorch.settings.fast_pred_var(False):
+                    preds = model(xb)
+                    loss = self.loss_fn(preds, yb)
+                loss.backward()
+                optimizer.step() 
+                epoch_loss += loss.item()
+
+            if scheduler is not None:
+                scheduler.step()
+            if epoch % int(np.ceil(self.epochs / self.logging_frequency)) == 0:
+                logger.log({"epoch": epoch, "train_loss": epoch_loss})
+        """
         self._loggers.append(logger)
         self.fitted=True
 
@@ -249,6 +308,7 @@ class GP:
                 X_tensor = self.input_scaler.transform(X_tensor)
 
         self.model.eval()
+        self.model.feature_extractor.eval()
         self.likelihood.eval() 
 
         with gpytorch.settings.fast_pred_var(False), \
@@ -357,14 +417,30 @@ class GP:
         input_dim = config.pop("input_dim", None)
         weight_decay = config.pop("weight_decay", None)
         model = cls(**config)
+        activation = get_activation(model.activation_str)
 
         with open(path / "extras.pkl", 'rb') as f: 
             kernel, likelihood, optimizer_cls, optimizer_kwargs, scheduler_cls, scheduler_kwargs, input_scaler, output_scaler = pickle.load(f)
 
         
         train_X, train_y = torch.load(path / f"train.pt")
-        model.model = ExactGP(kernel, train_X, train_y, likelihood)
-        model.model.load_state_dict(torch.load(path / f"model.pt", map_location=device))
+        
+        # Rebuild feature extractor
+        activation = get_activation(model.activation_str)
+        feature_extractor = MLP(
+            input_dim=input_dim,
+            hidden_sizes=model.hidden_sizes,
+            dropout=model.dropout,
+            activation=activation
+        )
+
+        # Rebuild GP model with feature extractor
+        model.model = ExactGP(kernel, train_X, train_y, likelihood, feature_extractor)
+
+        # Load weights (includes feature extractor weights)
+        model.model.load_state_dict(torch.load(path / "model.pt", map_location=device))
+
+        model.model = model.model.to(device)
 
         model.kernel = kernel 
         model.likelihood = likelihood
