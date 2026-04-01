@@ -366,6 +366,8 @@ class GP:
         model.model = ExactGP(kernel, train_X, train_y, likelihood)
         model.model.load_state_dict(torch.load(path / f"model.pt", map_location=device))
 
+        model.train_X = train_X.to(device)
+        model.train_y = train_y.to(device)
         model.kernel = kernel 
         model.likelihood = likelihood
         model.optimizer_cls = optimizer_cls 

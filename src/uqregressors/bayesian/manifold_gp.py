@@ -442,6 +442,8 @@ class ManifoldGP:
 
         model.model = model.model.to(device)
 
+        model.train_X = train_X.to(device)
+        model.train_y = train_y.to(device)
         model.kernel = kernel 
         model.likelihood = likelihood
         model.optimizer_cls = optimizer_cls 
