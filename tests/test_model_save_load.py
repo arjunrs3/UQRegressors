@@ -11,6 +11,7 @@ from uqregressors.bayesian.deep_ens import DeepEnsembleRegressor
 from uqregressors.bayesian.dropout import MCDropoutRegressor
 from uqregressors.bayesian.sklearn_gp import SklearnGP
 from uqregressors.conformal.conformal_wrapper import ConformalWrapper
+from uqregressors.conformal.isotonic_cal_wrapper import IsotonicCalWrapper
 from uqregressors.conformal.conformal_quantile_ens import ConformalQuantileEnsemble
 from uqregressors.bayesian.gp import GP
 from uqregressors.bayesian.manifold_gp import ManifoldGP
@@ -28,6 +29,7 @@ def generate_data(n_samples=200, n_features=5):
     return X, y
 
 @pytest.mark.parametrize("regressor_class, regressor_name", [
+    (IsotonicCalWrapper, "IsotonicCalWrapper"),
     (ConformalQuantileEnsemble, "ConformalQuantileEnsemble"),
     (ConformalWrapper, "ConformalWrapper"),
     (ExponentialCalWrapper, "ExponentialCalWrapper"),
@@ -47,7 +49,7 @@ def test_model_save_and_load(regressor_class, regressor_name):
 
     if regressor_class in [SklearnGP]:
         reg = regressor_class()
-    elif regressor_class in [ConformalWrapper, ExponentialCalWrapper]: 
+    elif regressor_class in [ConformalWrapper, ExponentialCalWrapper, IsotonicCalWrapper]: 
          reg = regressor_class(underlying_regressor=DeepEnsembleRegressor(epochs=10, random_seed=42))
     else:
         reg = regressor_class(epochs=10, random_seed=42)
